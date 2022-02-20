@@ -10,7 +10,7 @@ int main(int argc,char* argv[]){
     FILE * fp = NULL;
     fp = fopen(argv[1],"r");
     if(!fp){
-        fprintf(stderr, "target \"%s\" not exist\n");
+        fprintf(stderr, "target \"%s\" not exist\n",argv[1]);
         exit(1);
     }
     
