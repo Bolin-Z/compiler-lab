@@ -4,7 +4,7 @@
 int main(int argc,char* argv[]){
     /* command line arguments */
     if(argc!=2){
-        fprintf(stderr,"usage: parser *.cmm\n");
+        fprintf(stderr,"Usage: %s *.cmm\n",argv[0]);
         exit(1);
     }
     FILE * fp = NULL;
