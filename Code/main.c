@@ -1,6 +1,9 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include "syntax.tab.h"
 #include"decls.h"
+
+extern void yyrestart(FILE*);
 
 int main(int argc,char* argv[]){
     /* command line arguments */
@@ -15,6 +18,9 @@ int main(int argc,char* argv[]){
         exit(1);
     }
     
+    yyrestart(fp);
+    yyparse();
+
     fclose(fp);
     fp = NULL;
     return 0;

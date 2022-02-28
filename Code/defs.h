@@ -24,18 +24,18 @@ static char Error_Type[] = {'A','B','\0'};
 
 /* data structure */
 
+// YYSTYPE
+typedef union tokenlval{
+    char ID[IDLEN];
+    int lextype;
+    int intval;
+    float floatval;
+}tokenlval;
+
 struct CSTnode{
     int tokentype;
-    int lextype;
     int lineno;
     bool empty_str;
-    union{
-        char ID[IDLEN];
-        int intval;
-        float floatval;
-    }tokenval;
-    struct CSTnode * sibiling;
-    struct CSTnode * children;
 };
 
 #endif

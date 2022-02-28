@@ -1,6 +1,6 @@
 #include"decls.h"
 
-void perror(int error_type,int line_num,char * format_msg, ...){
+void error_msg(int error_type,int line_num,char * format_msg, ...){
     va_list ap;
     va_start(ap,format_msg);
     /* defined the out put stream of error msg */

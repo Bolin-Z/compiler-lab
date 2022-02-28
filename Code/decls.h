@@ -5,10 +5,11 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<stdarg.h>
+#include<stdbool.h>
 
 /* declarations */
 // handle error msg
-void perror(int error_type,int line_num,char * format_msg, ...);
+void error_msg(int error_type,int line_num,char * format_msg, ...);
 
 /*CST related*/
 
