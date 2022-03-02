@@ -3,20 +3,21 @@
 
 #include<stdlib.h>
 #include<stdbool.h>
+#include<stddef.h>
 
 /* global marco and type */
 #define IDLEN 32
 // output error msg to
-#define ERROR_MSG_2 stdout
+#define ERROR_MSG_2 stderr
 
-#define LEX(a) LEX##_##a
+#define L(a) LEX##_##a
 enum{
     /* Not a lexical unit */
-    LEX(NOT),
+    L(NOT),
     /* relation operator */
-    LEX(LT),LEX(GT),LEX(LTE),LEX(GTE),LEX(EQ),LEX(NEQ),
+    L(LT),L(GT),L(LTE),L(GTE),L(EQ),L(NEQ),
     /* type */
-    LEX(INT),LEX(FLOAT)
+    L(INT),L(FLOAT)
 };
 
 /* global variable */
@@ -25,17 +26,29 @@ static char Error_Type[] = {'A','B','\0'};
 /* data structure */
 
 // YYSTYPE
-typedef union tokenlval{
-    char ID[IDLEN];
-    int lextype;
-    int intval;
-    float floatval;
-}tokenlval;
+/* Type of token */
+struct CST_tk_node{
+    int symtype;
+    union symval{
+        int intval;
+        float floatval;
+        int tktype;
+        char ID[IDLEN];
+    }_symval;
+};
 
-struct CSTnode{
-    int tokentype;
+/* Type of non-token */
+
+struct CST_nt_node{
+    int symtype;
     int lineno;
-    bool empty_str;
+    size_t child_cnt;
+    struct CST_nt_node ** child_list; 
+};
+
+union YYSTYPE {
+    struct CST_tk_node tk_node;
+    struct CST_nt_node nt_node;
 };
 
 #endif

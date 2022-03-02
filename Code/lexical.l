@@ -4,11 +4,21 @@
     #include "syntax.tab.h"
     #include "decls.h"
     #include <stdio.h>
+%}
 
-    void print_tk(char*s);
+%option yylineno
+
+%{
+    int yycolumn = 1;
+    #define YY_USER_ACTION                               \
+        yylloc.first_line = yylloc.last_line = yylineno; \
+        yylloc.first_column = yycolumn;                  \
+        yylloc.last_column = yycolumn + yyleng - 1;      \
+        yycolumn += yyleng;
 %}
 
 %{
+    void print_tk(char*s);
     #define RETURN(A)      \
         do{                \
             print_tk(#A);  \
@@ -17,10 +27,11 @@
 
 %}
 
-%option yylineno
 relop >|<|>=|<=|==|!=
 ws [ \f\r\t\v\n]
+
 %%
+\n   { yycolumn = 1;}
 {ws} {/* empty */}
 struct {RETURN(STRUCT);}
 return {RETURN(RETURN);}
@@ -50,7 +61,7 @@ int|float {RETURN(TYPE);}
 \{ {RETURN(LC);}
 \} {RETURN(RC);}
 <<EOF>> {yyterminate();}
-. { error_msg(0,yylineno,"Unknown Symbol");}
+. { error_msg(0,yylineno,"Mysterious character \"%c\".",yytext[0]);}
 %%
 
 void print_tk(char*s){
