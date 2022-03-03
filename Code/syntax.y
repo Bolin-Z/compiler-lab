@@ -1,7 +1,7 @@
 %{
     #include "lex.yy.c"
     #include "decls.h"
-    #include "defs.h"
+    #include "cst.h"
 
     void yyerror(const char*msg);
 %}
@@ -10,34 +10,34 @@
 //%define parse.error custom
 %locations
 
-%define api.value.type {union YYSTYPE}
+%define api.value.type {struct CST_nt_node *}
 
-%token <tk_node> TYPE
-%token <tk_node> ID
-%token <tk_node> INT FLOAT
-%token <tk_node> SEMI
-%token <tk_node> COMMA
-%token <tk_node> LC RC
-%token <tk_node> STRUCT RETURN IF WHILE
+%token  TYPE
+%token  ID
+%token  INT FLOAT
+%token  SEMI
+%token  COMMA
+%token  LC RC
+%token  STRUCT RETURN IF WHILE
 
-%nonassoc <tk_node> LOWER_THAN_ELSE
-%nonassoc <tk_node> ELSE
+%nonassoc  LOWER_THAN_ELSE
+%nonassoc  ELSE
 
-%right <tk_node> ASSIGNOP
-%left  <tk_node> OR
-%left  <tk_node> AND
-%left  <tk_node> RELOP
-%left  <tk_node> PLUS MINUS
-%left  <tk_node> STAR DIV
-%right <tk_node> NOT NEG
-%left  <tk_node> DOT LB RB LP RP
+%right  ASSIGNOP
+%left   OR
+%left   AND
+%left   RELOP
+%left   PLUS MINUS
+%left   STAR DIV
+%right  NOT NEG
+%left   DOT LB RB LP RP
 
-%nterm <nt_node> Program ExtDefList ExtDef Specifier FunDec CompSt VarDec ExtDecList
-%nterm <nt_node> StructSpecifier OptTag DefList Tag
-%nterm <nt_node> VarList ParamDec
-%nterm <nt_node> StmtList Stmt Exp
-%nterm <nt_node> Def DecList Dec
-%nterm <nt_node> Args
+%nterm  Program ExtDefList ExtDef Specifier FunDec CompSt VarDec ExtDecList
+%nterm  StructSpecifier OptTag DefList Tag
+%nterm  VarList ParamDec
+%nterm  StmtList Stmt Exp
+%nterm  Def DecList Dec
+%nterm  Args
 
 %%
 /* High-level Definitions */
@@ -45,7 +45,7 @@ Program : ExtDefList
     ;
 ExtDefList : ExtDef ExtDefList
     | /* empty */
-    | error ExtDefList { fprintf(stderr,"ExtDefList\n");}
+//    | error ExtDefList { fprintf(stderr,"ExtDefList\n");}
     ;
 ExtDef : Specifier ExtDecList SEMI
     | Specifier SEMI 
@@ -57,7 +57,7 @@ ExtDef : Specifier ExtDecList SEMI
     ;
 ExtDecList : VarDec
     | VarDec COMMA ExtDecList
-    | error COMMA ExtDecList { fprintf(stderr,"ExtDecList\n");}
+ //   | error COMMA ExtDecList { fprintf(stderr,"ExtDecList\n");}
     ;
 
 /* Specifiers */
@@ -85,7 +85,7 @@ FunDec : ID LP VarList RP
     ;
 VarList : ParamDec COMMA VarList
     | ParamDec
-    | error COMMA VarList { fprintf(stderr,"VarList\n");}
+//   | error COMMA VarList { fprintf(stderr,"VarList\n");}
     ;
 ParamDec : Specifier VarDec
     ;
@@ -96,7 +96,7 @@ CompSt : LC DefList StmtList RC
     ;
 StmtList : Stmt StmtList
     | /* empty */
-    | error StmtList { fprintf(stderr,"StmList\n");}
+//    | error StmtList { fprintf(stderr,"StmList\n");}
     ;
 Stmt : Exp SEMI
     | CompSt
@@ -110,7 +110,7 @@ Stmt : Exp SEMI
 /* Local Definitions */
 DefList : Def DefList
     | /* empty */
-    | error DefList { fprintf(stderr,"DefList\n");}
+//    | error DefList { fprintf(stderr,"DefList\n");}
     ;
 Def : Specifier DecList SEMI
     ;
