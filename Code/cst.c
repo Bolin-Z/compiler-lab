@@ -236,5 +236,33 @@ struct CST_node * copy_node(struct CST_node * rhs){
 }
 
 void print_CST(struct CST_node * cur,int depth){
-    /* TODO */
+    if(is_token(cur->compact_type)){
+        for(int i = 0;i < depth;i++) printf("  ");
+        printf("%s",symtype2str[get_symtype(cur->compact_type)]);
+        switch(get_nodetype(cur->compact_type)){
+            case ID_NODE    : printf(": %s",((struct CST_id_node *)cur)->ID); break;
+            case MUL_NODE   : 
+                if(get_symtype(cur->compact_type) == SYM(TYPE)){
+                    if(((struct CST_mul_node *)cur)->tktype == TK(INT)){
+                        printf(": int");
+                    }else if(((struct CST_mul_node *)cur)->tktype == TK(FLOAT)){
+                        printf(": float");
+                    }else printf(": error!");
+                }
+                break;
+            case INT_NODE   : printf(": %ld",((struct CST_int_node *)cur)->intval); break;
+            case FLOAT_NODE : printf(": %f",((struct CST_float_node *)cur)->floatval); break;
+            default         : break;
+        }
+        printf("\n");
+    }else{
+        if(cur->child_cnt != 0){
+            for(int i = 0;i < depth;i++) printf("  ");
+            printf("%s",symtype2str[get_symtype(cur->compact_type)]);
+            printf(" (%d)\n",cur->lineno);
+            for(size_t i = 0;i < cur->child_cnt;i++){
+                print_CST(cur->child_list[i],depth+1);
+            }
+        }
+    }
 }
