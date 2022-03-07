@@ -1,0 +1,63 @@
+int g1, g2;
+int array[5][5];
+int;
+
+struct {
+    int k0;
+};
+
+struct mystruct1{
+    int k1, k2;
+    float k3;
+    struct in_struct{
+        int k4;
+        int k5;
+    };
+};
+
+int add(int a, int b){
+    int ret = a + b;
+    return ret;
+}
+
+int blank(){}
+
+
+int main(int a, int b){
+    int x, y=0, i=0;
+    float z;
+    struct mystruct3{
+        int k6;
+        float k7;
+    };
+
+    mystruct1 m1;
+    mystruct3 m3;
+    m1.k1 = 3;
+    m1.k3 = 2.5;
+    m1.in_struct.k5 = 0;
+    m3.k6 = 114514;
+
+    x = add(3,4);
+    array[3][1] = x + 1;
+    array[4][2] = array[3][1] * array[3][1];
+    x = x * 4;
+    x = x + 5;
+    z = x / 6;
+    blank();
+
+    while(i<5){
+        i++;
+        y = y+i;
+        if (i==5){
+            y = y * 2;
+        }
+    }
+
+    if() return 1;
+    else {return 0;}
+
+    return 555;
+
+}
+
