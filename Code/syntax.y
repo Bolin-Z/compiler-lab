@@ -12,6 +12,10 @@
 
 %define api.value.type {struct CST_nt_node *}
 
+%nonassoc MID_ERR
+%nonassoc HEAD_ERR
+%nonassoc TAIL_ERR
+
 %token  TYPE
 %token  ID
 %token  INT FLOAT
@@ -32,6 +36,8 @@
 %right  NOT NEG
 %left   DOT LB RB LP RP
 
+%nterm ErrExtDef
+
 %nterm  Program ExtDefList ExtDef Specifier FunDec CompSt VarDec ExtDecList
 %nterm  StructSpecifier OptTag DefList Tag
 %nterm  VarList ParamDec
@@ -49,6 +55,18 @@ ExtDefList : ExtDef ExtDefList
 ExtDef : Specifier ExtDecList SEMI
     | Specifier SEMI 
     | Specifier FunDec CompSt
+    | ErrExtDef
+    ;
+ErrExtDef : error Specifier ExtDecList SEMI %prec HEAD_ERR
+    | error Specifier SEMI %prec HEAD_ERR
+    | error Specifier FunDec CompSt %prec HEAD_ERR
+    | error ExtDecList SEMI %prec MID_ERR
+    | error SEMI %prec MID_ERR
+    | error FunDec CompSt %prec MID_ERR
+    | Specifier error SEMI %prec MID_ERR
+    | Specifier error CompSt %prec MID_ERR
+    | Specifier ExtDecList error %prec TAIL_ERR
+    | Specifier error %prec TAIL_ERR
     ;
 ExtDecList : VarDec
     | VarDec COMMA ExtDecList
