@@ -1,5 +1,5 @@
 %{
-    #define PRINT_TK true
+    #define PRINT_TK false
 
     #include "syntax.tab.h"
     #include "decls.h"
