@@ -45,25 +45,18 @@ Program : ExtDefList
     ;
 ExtDefList : ExtDef ExtDefList
     | /* empty */
-//    | error ExtDefList { fprintf(stderr,"ExtDefList\n");}
     ;
 ExtDef : Specifier ExtDecList SEMI
     | Specifier SEMI 
     | Specifier FunDec CompSt
-//    | error ExtDecList SEMI { fprintf(stderr,"Line[%d]: specifier error\n",yylineno);}
-//    | error FunDec CompSt
-//    | error SEMI
-//    | error { fprintf(stderr,"Line[%d]: stmt error\n",yylineno);}
     ;
 ExtDecList : VarDec
     | VarDec COMMA ExtDecList
- //   | error COMMA ExtDecList { fprintf(stderr,"ExtDecList\n");}
     ;
 
 /* Specifiers */
 Specifier : TYPE
     | StructSpecifier
-//    | error { fprintf(stderr,"Line[%d]: specifier error\n",yylineno);}
     ;
 StructSpecifier : STRUCT OptTag LC DefList RC
     | STRUCT Tag
@@ -77,26 +70,21 @@ Tag : ID
 /* Declarators */
 VarDec : ID
     | VarDec LB INT RB
-//    | VarDec error RB { fprintf(stderr,"Line[%d]: RB error\n",yylineno);}
     ;
 FunDec : ID LP VarList RP
     | ID LP RP
-//    | error RP
     ;
 VarList : ParamDec COMMA VarList
     | ParamDec
-//   | error COMMA VarList { fprintf(stderr,"VarList\n");}
     ;
 ParamDec : Specifier VarDec
     ;
 
 /* Statements */
 CompSt : LC DefList StmtList RC
-//    | error RC
     ;
 StmtList : Stmt StmtList
     | /* empty */
-//    | error StmtList { fprintf(stderr,"StmList\n");}
     ;
 Stmt : Exp SEMI
     | CompSt
@@ -104,19 +92,16 @@ Stmt : Exp SEMI
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE
     | IF LP Exp RP Stmt ELSE Stmt
     | WHILE LP Exp RP Stmt
-//    | error SEMI { fprintf(stderr,"Line[%d]: stmt error\n",yylineno);}
     ;
 
 /* Local Definitions */
 DefList : Def DefList
     | /* empty */
-//    | error DefList { fprintf(stderr,"DefList\n");}
     ;
 Def : Specifier DecList SEMI
     ;
 DecList : Dec
     | Dec COMMA DecList
-//    | error COMMA DecList { fprintf(stderr,"Wrong DecList\n");}
     ;
 Dec : VarDec
     | VarDec ASSIGNOP Exp
@@ -141,7 +126,6 @@ Exp : Exp ASSIGNOP Exp
     | ID
     | INT
     | FLOAT
-//    | error { fprintf(stderr, "Line[%d]: Experr\n",yylineno);}
     ;
 Args : Exp COMMA Args
     | Exp
