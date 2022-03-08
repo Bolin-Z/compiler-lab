@@ -12,6 +12,7 @@
 
 %define api.value.type {struct CST_nt_node *}
 
+
 %token  TYPE
 %token  ID
 %token  INT FLOAT

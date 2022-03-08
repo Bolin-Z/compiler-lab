@@ -19,6 +19,7 @@ int main(int argc,char* argv[]){
     }
     
     yyrestart(fp);
+    yydebug = 1;
     yyparse();
 
     fclose(fp);
