@@ -33,8 +33,6 @@
 %right  NOT NEG
 %left   DOT LB RB LP RP
 
-%nterm ErrExtDef
-
 %nterm  Program ExtDefList ExtDef Specifier FunDec CompSt VarDec ExtDecList
 %nterm  StructSpecifier OptTag DefList Tag
 %nterm  VarList ParamDec
