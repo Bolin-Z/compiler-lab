@@ -1,0 +1,25 @@
+int main(){
+    
+    //bad int
+    int a = a;
+    int b = 00;
+    
+    //bad float 
+    float c = .5;
+    float d = 00.0;
+    float e = 2022..3;
+    
+    //bad ID
+    int _aAbBcc.c;
+    int 1AATFD;
+    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
+    
+    //bad type
+    INT f = 6;
+    wink g = 7;
+    
+    //undefined char
+    int h = @#$*&;
+    a = @;   
+
+}

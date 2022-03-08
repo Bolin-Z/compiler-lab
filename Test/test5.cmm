@@ -1,0 +1,11 @@
+int main(){
+/* comment1 */
+
+	int i=1;
+	int j = 2;
+/*comment 2
+	/*comment 2.1*/
+*/
+
+/*comment 3*/
+}
