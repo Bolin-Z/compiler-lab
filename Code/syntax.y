@@ -50,9 +50,12 @@ ExtDefList : ExtDef ExtDefList
 ExtDef : Specifier ExtDecList SEMI
     | Specifier SEMI 
     | Specifier FunDec CompSt
+    | error SEMI
+    | error FunDec CompSt
     ;
 ExtDecList : VarDec
     | VarDec COMMA ExtDecList
+    | error COMMA ExtDecList
     ;
 
 /* Specifiers */
@@ -74,6 +77,7 @@ VarDec : ID
     ;
 FunDec : ID LP VarList RP
     | ID LP RP
+    | error RP
     ;
 VarList : ParamDec COMMA VarList
     | ParamDec
@@ -83,6 +87,7 @@ ParamDec : Specifier VarDec
 
 /* Statements */
 CompSt : LC DefList StmtList RC
+    | error RC
     ;
 StmtList : Stmt StmtList
     | /* empty */
@@ -93,6 +98,10 @@ Stmt : Exp SEMI
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE
     | IF LP Exp RP Stmt ELSE Stmt
     | WHILE LP Exp RP Stmt
+    | error SEMI
+    | IF error RP Stmt %prec LOWER_THAN_ELSE
+    | IF error RP Stmt ELSE Stmt
+    | WHILE error RP Stmt
     ;
 
 /* Local Definitions */
@@ -100,12 +109,15 @@ DefList : Def DefList
     | /* empty */
     ;
 Def : Specifier DecList SEMI
+    | Specifier error SEMI
     ;
 DecList : Dec
     | Dec COMMA DecList
+    | error COMMA DecList
     ;
 Dec : VarDec
     | VarDec ASSIGNOP Exp
+    | error ASSIGNOP Exp
     ;
 
 /* Expressions */
@@ -118,11 +130,14 @@ Exp : Exp ASSIGNOP Exp
     | Exp STAR Exp
     | Exp DIV Exp
     | LP Exp RP
+    | LP error RP
     | MINUS Exp %prec NEG
     | NOT Exp
     | ID LP Args RP
     | ID LP RP
+    | ID error RP
     | Exp LB Exp RB
+    | Exp LB error RB
     | Exp DOT ID
     | ID
     | INT
@@ -130,6 +145,7 @@ Exp : Exp ASSIGNOP Exp
     ;
 Args : Exp COMMA Args
     | Exp
+    | error COMMA Args
     ;
 %%
 

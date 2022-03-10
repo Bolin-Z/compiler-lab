@@ -1,5 +1,4 @@
 int a;
 inf b;
-int c
-int d;
-int main){return a;}
+int c;
+int main()return a;}
