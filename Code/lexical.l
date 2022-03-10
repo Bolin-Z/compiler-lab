@@ -1,5 +1,5 @@
 %{
-    #define PRINT_TK true
+    #define PRINT_TK false
 
     #include "syntax.tab.h"
     #include "decls.h"
@@ -29,7 +29,6 @@
 
 relop >|<|>=|<=|==|!=
 ws [ \f\r\t\v\n]
-%option yylineno
 STRUCT struct
 RETURN return
 IF if
