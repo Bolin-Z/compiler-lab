@@ -36,8 +36,8 @@ ELSE else
 WHILE while
 TYPE int|float
 COMMENT "//"
-LCOMMENT "/*"
-RCOMMENT "*/"
+LCOMMENT \/\*
+RCOMMENT \*\/
 SEMI ;
 COMMA ,
 ASSIGNOP =

@@ -1,4 +1,12 @@
-int a;
-inf b;
-int c;
-int main()return a;}
+/*
+int main(){
+	float i = 1.05e;
+	float j = 1.05e-3
+	float p = 1.05e-03;
+	float q = 1.00e-;
+	float s = .05e+4
+	float t = 5.E3;
+}
+*/
+int a(){
+int foo(){}
