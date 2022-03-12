@@ -148,13 +148,16 @@ Exp : Exp ASSIGNOP Exp
     | Exp DIV error
     | LP Exp RP
     | LP error RP
+    | LP Exp error
     | MINUS Exp %prec NEG
     | NOT Exp
     | ID LP Args RP
+    | ID LP Args error
     | ID LP RP
     | ID LP error RP
     | Exp LB Exp RB
     | Exp LB error RB
+    | Exp LB Exp error
     | Exp DOT ID
     | ID
     | INT

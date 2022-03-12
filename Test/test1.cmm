@@ -1,92 +1,13 @@
-int g0 = 0;
-int g1
-int 2g;
-int g3, float g4;
-uint32_t g5;
-
-int array4[5][5]
-int array1[5][5;
-int array2[5,5];
-int array3[5(5)];
-int array5[5][];
-
-struct no_struct{};
-
-struct mystruct1{
-    int k1 - 1;
-    float 3k3;
-    struct{
-        int k4;
-        int k&5;
-    }in_struct
-};
-
-
-int add(int a, int b,
-    int c, float
-){
-    int ret = a + b;
-    int tmp = a + b + ;
-    return ret;
+float ;
+float uSIK3Wj_tqse0 [ 436200214 ] 
+;
+'struct {
+  int bM6IhCXLQfQaSYfBm ;
+}oBLgnzv ( float I60rsSrIIrEntfxOjfUB , int BdNjxeVgtkjJlVhW_o 
+  ) #{
+  int hMJNhhBoFUZIy3c ;
 }
-
-int 0Bad_FuncName(){
-    return 0;
+struct a9U1fREuEO {
+}JGI0gyvNf ( ) {
 }
-
-int blank0(int a,){}
-int blank1){}
-int blank2({}
-int blank3(){
-int blank4()}
-
-
-int main(int a, int b){
-    int x, y=0, i=0;
-    float z;
-    struct mystruct3{
-        int k6;
-        float k7;
-    };
-
-    float q1 = 0.;
-    float q2 = 01.100000;
-    float q3 = .9
-    uint64_t r;
-
-    mystruct1 m1;
-    mystruct3 m3;
-    m1.k1 = 09;
-    m1.k3 = .5;
-    m1.in_struct.k5 = 0;
-    m3.k6 = 114514
-
-    x = add(3,4;
-    x = add(*, 5);
-    x = add(1,3)
-    array[4][2] = array[3][1] ** array[3][1];
-    x = array[4*][&2];
-    x = x (*4) + 5 / 9abc;
-
-    int middle;
-
-    blank();
-
-    while(1){;}
-    while(i<){
-        i=i+1;
-        y = y+i*; 
-        x = array[5][5;
-        if (Good){
-            y = *;
-            y = /y;
-        }
-    }
-
-    if() { }
-    else return 00000;
-
-    return 555;
-    return 0abc;
-}
-
+struct GqYjDYZs ;
