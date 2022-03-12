@@ -48,11 +48,11 @@ ExtDefList : ExtDef ExtDefList
     | /* empty */
     ;
 ExtDef : Specifier ExtDecList SEMI
-    | Specifier SEMI 
-    | Specifier FunDec CompSt
-    | Specifier error SEMI
     | Specifier ExtDecList error
+    | Specifier error SEMI
+    | Specifier SEMI 
     | error SEMI
+    | Specifier FunDec CompSt
     | error FunDec CompSt
     | Specifier error CompSt
     ;
@@ -77,10 +77,12 @@ Tag : ID
 VarDec : ID
     | VarDec LB INT RB
     | VarDec LB error RB
+    | VarDec LB INT error
     ;
 FunDec : ID LP VarList RP
     | ID LP RP
     | ID LP error RP
+    | ID LP VarList error
     ;
 VarList : ParamDec COMMA VarList
     | ParamDec
@@ -95,18 +97,21 @@ StmtList : Stmt StmtList
     | /* empty */
     ;
 Stmt : Exp SEMI
+    | error SEMI
+    | Exp error
     | CompSt
     | RETURN Exp SEMI
+    | RETURN Exp error
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE
     | IF LP error RP Stmt %prec LOWER_THAN_ELSE
+    | IF LP Exp error Stmt %prec LOWER_THAN_ELSE
     | IF LP Exp RP Stmt ELSE Stmt
     | IF LP error RP Stmt ELSE Stmt
     | IF LP Exp RP error ELSE Stmt
+    | IF LP Exp error  ELSE Stmt
     | WHILE LP Exp RP Stmt
     | WHILE LP error RP Stmt
-    | error SEMI
-    | Exp error
-    | RETURN Exp error
+    | WHILE LP Exp error Stmt
     ;
 
 /* Local Definitions */
@@ -126,13 +131,21 @@ Dec : VarDec
 
 /* Expressions */
 Exp : Exp ASSIGNOP Exp
+    | Exp ASSIGNOP error
     | Exp AND Exp
+    | Exp AND error
     | Exp OR Exp
+    | Exp OR error
     | Exp RELOP Exp
+    | Exp RELOP error
     | Exp PLUS Exp
+    | Exp PLUS error
     | Exp MINUS Exp
+    | Exp MINUS error
     | Exp STAR Exp
+    | Exp STAR error
     | Exp DIV Exp
+    | Exp DIV error
     | LP Exp RP
     | LP error RP
     | MINUS Exp %prec NEG
