@@ -4,6 +4,9 @@
     #include "syntax.tab.h"
     #include "decls.h"
     #include <stdio.h>
+    #include "cst.h"
+    
+    extern struct CST_node * creat_node(int sym_type,int node_type,int lineno,const char* lexme);
 %}
 
 %option yylineno
@@ -27,7 +30,6 @@
 
 %}
 
-relop >|<|>=|<=|==|!=
 ws [ \f\r\t\v\n]
 STRUCT struct
 RETURN return
@@ -56,8 +58,8 @@ LB \[
 RB \]
 LC \{
 RC \}
-FLOAT [0-9]+.[0-9]+
-BASE .[0-9]+|[0-9]+.|[0-9]+.[0-9]+
+FLOAT [0-9]+\.[0-9]+
+BASE \.[0-9]+|[0-9]+\.|[0-9]+\.[0-9]+
 EXPONENT {BASE}[Ee][+-]?[0-9]+
 INT 0|[1-9][0-9]*
 OCT 0[0-7]*
@@ -67,36 +69,45 @@ ID [a-zA-Z_][a-zA-Z0-9_]*
 %%
 \n   { yycolumn = 1;}
 {ws} {/* empty */}
-{STRUCT}     {RETURN(STRUCT);}
-{RETURN}     {RETURN(RETURN);}
-{IF}         {RETURN(IF);}
-{ELSE}       {RETURN(ELSE);}
-{WHILE}      {RETURN(WHILE);}
-{TYPE}       {RETURN(TYPE);}
-{EXPONENT}   {printf("EXPONENT:%s\n",yytext); RETURN(FLOAT);}
-{HEX}        {printf("HEX:%s\n",yytext); RETURN(INT);}
-{OCT}        {printf("OCT:%s\n",yytext); RETURN(INT);}
-{FLOAT}      {RETURN(FLOAT);}
-{INT}        {printf("Integer value %d\n", atoi(yytext)); RETURN(INT);}
-{ID}         {RETURN(ID);}
-{SEMI}       {RETURN(SEMI);}
-{COMMA}      {RETURN(COMMA);}
-{ASSIGNOP}   {RETURN(ASSIGNOP);}
-{RELOP}      {RETURN(RELOP);}
-{PLUS}       {RETURN(PLUS);}
-{MINUS}      {RETURN(MINUS);}
-{STAR}       {RETURN(STAR);}
-{DIV}        {RETURN(DIV);}
-{AND}        {RETURN(AND);}
-{OR}         {RETURN(OR);}
-{DOT}        {RETURN(DOT);}
-{NOT}        {RETURN(NOT);}
-{LP}         {RETURN(LP);}
-{RP}         {RETURN(RP);}
-{LB}         {RETURN(LB);}
-{RB}         {RETURN(RB);}
-{LC}         {RETURN(LC);}
-{RC}         {RETURN(RC);}
+{STRUCT}     {creat_node(STRUCT, UNIQ_NODE, yylineno, NULL); return STRUCT;}
+{RETURN}     {creat_node(RETURN, UNIQ_NODE, yylineno, NULL); return RETURN;}
+{IF}         {creat_node(IF, UNIQ_NODE, yylineno, NULL); return IF;}
+{ELSE}       {creat_node(ELSE, UNIQ_NODE, yylineno, NULL); return ELSE;}
+{WHILE}      {creat_node(WHILE, UNIQ_NODE, yylineno, NULL); return WHILE;}
+{TYPE}       {creat_node(TYPE, UNIQ_NODE, yylineno, NULL); return TYPE;}
+{EXPONENT}   { creat_node(FLOAT, FLOAT_NODE, yylineno, yytext); 
+		printf("EXPONENT:%s\n",yytext);
+		return FLOAT;}
+{HEX}        { creat_node(INT, INT_NODE, yylineno, yytext);
+		printf("HEX:%s\n",yytext); 
+		return INT;}
+{OCT}        { creat_node(INT, INT_NODE, yylineno, yytext);
+		printf("OCT:%s\n",yytext); 
+		return INT;}
+{FLOAT}      { creat_node(FLOAT, FLOAT_NODE, yylineno, yytext);
+		printf("FLOAT:%s\n",yytext);
+		return FLOAT;}
+{INT}        { creat_node(INT, INT_NODE, yylineno, yytext);
+		printf("Integer value %d\n", atoi(yytext)); RETURN(INT);}
+{ID}         {creat_node(ID, ID_NODE, yylineno, yytext); return ID;}
+{SEMI}       {creat_node(SEMI, UNIQ_NODE, yylineno, NULL); return SEMI;}
+{COMMA}      {creat_node(COMMA, UNIQ_NODE, yylineno, NULL); return COMMA;}
+{ASSIGNOP}   {creat_node(ASSIGNOP, UNIQ_NODE, yylineno, NULL); return ASSIGNOP;}
+{RELOP}      {creat_node(RELOP, MUL_NODE, yylineno, NULL); return RELOP;}
+{PLUS}       {creat_node(PLUS, UNIQ_NODE, yylineno, NULL); return PLUS;}
+{MINUS}      {creat_node(MINUS, UNIQ_NODE, yylineno, NULL); return MINUS;}
+{STAR}       {creat_node(STAR, UNIQ_NODE, yylineno, NULL); return STAR;}
+{DIV}        {creat_node(DIV, UNIQ_NODE, yylineno, NULL); return DIV;}
+{AND}        {creat_node(AND, UNIQ_NODE, yylineno, NULL); return AND;}
+{OR}         {creat_node(OR, UNIQ_NODE, yylineno, NULL); return OR;}
+{DOT}        {creat_node(DOT, UNIQ_NODE, yylineno, NULL); return DOT;}
+{NOT}        {creat_node(NOT, UNIQ_NODE, yylineno, NULL); return NOT;}
+{LP}         {creat_node(LP, UNIQ_NODE, yylineno, NULL); return LP;}
+{RP}         {creat_node(RP, UNIQ_NODE, yylineno, NULL); return RP;}
+{LB}         {creat_node(LB, UNIQ_NODE, yylineno, NULL); return LB;}
+{RB}         {creat_node(RB, UNIQ_NODE, yylineno, NULL); return RB;}
+{LC}         {creat_node(LC, UNIQ_NODE, yylineno, NULL); return LC;}
+{RC}         {creat_node(RC, UNIQ_NODE, yylineno, NULL); return RC;}
 {COMMENT}    {
 		char c = input(); 
 		while(c!='\n'){c=input();}
