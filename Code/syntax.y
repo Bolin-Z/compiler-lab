@@ -139,46 +139,47 @@ Def : Specifier DecList SEMI { $$ = creat_node(SYM(Def),NT_NODE,@$.first_line,NU
 DecList : Dec { $$ = creat_node(SYM(DecList),NT_NODE,@$.first_line,NULL); add_child($$,1,$1);}
     | Dec COMMA DecList { $$ = creat_node(SYM(DecList),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
     ;
-Dec : VarDec
-    | VarDec ASSIGNOP Exp
+Dec : VarDec { $$ = creat_node(SYM(Dec),NT_NODE,@$.first_line,NULL); add_child($$,1,$1);}
+    | VarDec ASSIGNOP Exp { $$ = creat_node(SYM(Dec),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
     ;
 
 /* Expressions */
-Exp : Exp ASSIGNOP Exp
-    | Exp ASSIGNOP error
-    | Exp AND Exp
-    | Exp AND error
-    | Exp OR Exp
-    | Exp OR error
-    | Exp RELOP Exp
-    | Exp RELOP error
-    | Exp PLUS Exp
-    | Exp PLUS error
-    | Exp MINUS Exp
-    | Exp MINUS error
-    | Exp STAR Exp
-    | Exp STAR error
-    | Exp DIV Exp
-    | Exp DIV error
-    | LP Exp RP
-    | LP error RP
-    | LP Exp error
-    | MINUS Exp %prec NEG
-    | NOT Exp
-    | ID LP Args RP
-    | ID LP Args error
-    | ID LP RP
-    | ID LP error RP
-    | Exp LB Exp RB
-    | Exp LB error RB
-    | Exp LB Exp error
-    | Exp DOT ID
-    | ID
-    | INT
-    | FLOAT
+Exp : Exp ASSIGNOP Exp { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
+    | Exp AND Exp { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
+    | Exp OR Exp { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
+    | Exp RELOP Exp { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
+    | Exp PLUS Exp { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
+    | Exp MINUS Exp { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
+    | Exp STAR Exp { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
+    | Exp DIV Exp { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
+    | LP Exp RP { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
+    | MINUS Exp %prec NEG { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,2,$1,$2);}
+    | NOT Exp { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,2,$1,$2);}
+    | ID LP Args RP { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,4,$1,$2,$3,$4);}
+    | ID LP RP { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
+    | Exp LB Exp RB { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,4,$1,$2,$3,$4);}
+    | Exp DOT ID { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
+    | ID { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,1,$1);}
+    | INT { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,1,$1);}
+    | FLOAT { $$ = creat_node(SYM(Exp),NT_NODE,@$.first_line,NULL); add_child($$,1,$1);}
+    /* error recovery */
+    | Exp ASSIGNOP error { $$ = NULL; destory_tree($1); destory_node($2);}
+    | Exp AND error { $$ = NULL; destory_tree($1); destory_node($2);}
+    | Exp OR error { $$ = NULL; destory_tree($1); destory_node($2);}
+    | Exp RELOP error { $$ = NULL; destory_tree($1); destory_node($2);}
+    | Exp PLUS error { $$ = NULL; destory_tree($1); destory_node($2);}
+    | Exp MINUS error { $$ = NULL; destory_tree($1); destory_node($2);}
+    | Exp STAR error { $$ = NULL; destory_tree($1); destory_node($2);}
+    | Exp DIV error { $$ = NULL; destory_tree($1); destory_node($2);}
+    | LP error RP { $$ = NULL; destory_node($1); destory_node($3);}
+    | LP Exp error { $$ = NULL; destory_node($1); destory_tree($2);}
+    | ID LP Args error { $$ = NULL; destory_node($1); destory_node($2); destory_tree($3);}
+    | ID LP error RP { $$ = NULL; destory_node($1); destory_node($2); destory_node($4);}
+    | Exp LB error RB { $$ = NULL; destory_tree($1); destory_node($2); destory_node($4);}
+    | Exp LB Exp error { $$ = NULL; destory_tree($1); destory_node($2); destory_tree($3);}
     ;
-Args : Exp COMMA Args
-    | Exp
+Args : Exp COMMA Args { $$ = creat_node(SYM(Args),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
+    | Exp { $$ = creat_node(SYM(Args),NT_NODE,@$.first_line,NULL); add_child($$,1,$1);}
     ;
 %%
 

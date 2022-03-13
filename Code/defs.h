@@ -21,7 +21,7 @@ enum SYM_TYPE{
     SYM(STRUCT), SYM(RETURN),
     SYM(ASSIGNOP),
     /* non-terminal type */
-    SYM(Program), SYM(ExtDefList), SYM(Specifier), SYM(FunDec), SYM(Compst), SYM(VarDec), SYM(ExtDecList),
+    SYM(Program), SYM(ExtDefList), SYM(ExtDef), SYM(Specifier), SYM(FunDec), SYM(CompSt), SYM(VarDec), SYM(ExtDecList),
     SYM(StructSpecifier), SYM(OptTag), SYM(DefList), SYM(Tag),
     SYM(VarList), SYM(ParamDec),
     SYM(StmtList), SYM(Stmt), SYM(Exp),
