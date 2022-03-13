@@ -8,7 +8,7 @@
 /* global marco and type */
 
 // output error msg to
-#define ERROR_MSG_2 stderr
+#define ERROR_MSG_2 stdout
 
 #define SYM(a) SYM##_##TYPE##_##a
 enum SYM_TYPE{
@@ -55,10 +55,5 @@ enum TK_TYPE{
     /* type */
     TK(INT),TK(FLOAT)
 };
-
-
-
-/* global variable */
-static char Error_Type[] = {'A','B','\0'};
 
 #endif
