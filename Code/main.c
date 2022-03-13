@@ -2,8 +2,11 @@
 #include<stdlib.h>
 #include "syntax.tab.h"
 #include"decls.h"
+#include"cst.h"
 
 extern void yyrestart(FILE*);
+bool has_error;
+struct CST_node * cst_root;
 
 int main(int argc,char* argv[]){
     /* command line arguments */
@@ -19,11 +22,18 @@ int main(int argc,char* argv[]){
     }
     
     yyrestart(fp);
-    yydebug = 1;
+    has_error = false;
+    cst_root = NULL;
     yyparse();
-
     fclose(fp);
     fp = NULL;
+    if(!has_error){
+        if(cst_root!=NULL){
+            print_CST(cst_root,0);
+        }
+    }
+    destory_tree(cst_root);
+    cst_root = NULL;
     return 0;
 }
 

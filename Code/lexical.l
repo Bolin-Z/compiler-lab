@@ -137,13 +137,13 @@ ID [a-zA-Z_][a-zA-Z0-9_]*
 		        cur = input();
 		    }
 		}
-		//if(flag) printf("Match/* */!\n");
-		if(!flag) error_msg(0,yylineno,"Didn't match /* !");
+		if(flag) printf("Match/* */!\n");
+		else error_msg('A',yylineno,"Didn't match /* !");
 	      }
 
-{RCOMMENT}   { error_msg(0,yylineno,yytext);}
+{RCOMMENT}   { error_msg('A',yylineno,yytext);}
 <<EOF>>      {yyterminate();}
-.            { error_msg(0,yylineno,yytext);}
+.            { error_msg('A',yylineno,yytext);}
 %%
 void print_tk(char*s){
 #if PRINT_TK
