@@ -6,7 +6,7 @@
     #include "decls.h"
     #include <stdio.h>
     #include "cst.h"
-    
+
     //extern struct CST_node * creat_node(int sym_type,int node_type,int lineno,const char* lexme);
 %}
 

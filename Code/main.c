@@ -20,19 +20,12 @@ int main(int argc,char* argv[]){
         fprintf(ERROR_MSG_2, "target \"%s\" not exist\n",argv[1]);
         exit(1);
     }
-    
     yyrestart(fp);
     has_error = false;
     cst_root = NULL;
     yyparse();
     fclose(fp);
     fp = NULL;
-    if(!has_error){
-        if(cst_root!=NULL){
-            print_CST(cst_root,0);
-        }
-    }
-    destory_tree(cst_root);
     cst_root = NULL;
     return 0;
 }

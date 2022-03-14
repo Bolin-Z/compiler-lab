@@ -28,23 +28,22 @@ struct CST_uniq_node{
 
 /* function */
 
-static inline int set_compact_type(int sym_type,int node_type){
+int set_compact_type(int sym_type,int node_type){
     return (sym_type << 4) | node_type;
 }
 
-static inline int get_symtype(int compact_type){
+int get_symtype(int compact_type){
     return (compact_type >> 4);
 }
-
-static inline int get_nodetype(int compact_type){
+int get_nodetype(int compact_type){
     return (compact_type & NODE_MASK);
 }
 
-static inline bool is_token(int compact_type){
+bool is_token(int compact_type){
     return (compact_type & NT_NODE) != NT_NODE;
 }
 
-static int str2tktype(const char * op){
+int str2tktype(const char * op){
     size_t op_len = strlen(op);
     switch(op_len){
         case 5 : if(!strncmp("float",op,op_len)) return TK(FLOAT);
@@ -93,6 +92,7 @@ static inline struct CST_node * creat_float_node(int comp_type,float val){
 static inline struct CST_node * creat_id_node(int comp_type,const char* val){
     struct CST_id_node * p = (struct CST_id_node *)malloc(sizeof(struct CST_id_node));
     if(!p) return NULL;
+    p->compact_type = comp_type;
     size_t id_len = strlen(val);
     p->ID = (char*)malloc(id_len+1);
     if(p->ID == NULL){
@@ -118,7 +118,7 @@ static inline struct CST_node * creat_nt_node(int comp_type,int lineno){
 
 struct CST_node * creat_node(int sym_type,int node_type,int lineno,const char* lexme){
     struct CST_node * p = NULL;
-    size_t lexme_len = strlen(lexme);
+    size_t lexme_len = (lexme == NULL)? 0 : strlen(lexme);
     char * t = (char *)malloc(lexme_len+1);
     if (!t) return NULL;
     for(size_t i = 0;i < lexme_len;i++){

@@ -60,10 +60,10 @@ void destory_tree(struct CST_node *);
 struct CST_node * copy_node(struct CST_node *);
 
 /* Utility */
-static inline int get_symtype(int compact_type);
-static inline int get_nodetype(int compact_type);
-static inline bool is_token(int compact_type);
-static int str2tktype(const char * op);
+int get_symtype(int compact_type);
+int get_nodetype(int compact_type);
+bool is_token(int compact_type);
+int str2tktype(const char * op);
 
 /* Action */
 void print_CST(struct CST_node *,int);
