@@ -44,10 +44,11 @@
 
 %destructor {destory_node($$); $$ = NULL; } TYPE ID INT FLOAT SEMI COMMA LC RC STRUCT RETURN IF WHILE
 %destructor {destory_node($$); $$ = NULL; } ELSE ASSIGNOP OR AND RELOP PLUS MINUS STAR DIV NOT NEG DOT LB RB LP RP
-%destructor {destory_tree($$); $$ = NULL; } Program ExtDefList ExtDef Specifier FunDec CompSt VarDec ExtDecList
+%destructor {destory_tree($$); $$ = NULL; } ExtDefList ExtDef Specifier FunDec CompSt VarDec ExtDecList
 %destructor {destory_tree($$); $$ = NULL; } StructSpecifier OptTag DefList Tag
 %destructor {destory_tree($$); $$ = NULL; } VarList ParamDec StmtList Stmt Exp
 %destructor {destory_tree($$); $$ = NULL; } Def DecList Dec Args
+%destructor { if(has_error){ destory_tree($$); $$ = NULL;}} Program
 
 %%
 /* High-level Definitions */
@@ -184,6 +185,5 @@ Args : Exp COMMA Args { $$ = creat_node(SYM(Args),NT_NODE,@$.first_line,NULL); a
 %%
 
 void yyerror(const char*msg){
-    has_error = true;
     error_msg('B',yylineno,msg);
 }
