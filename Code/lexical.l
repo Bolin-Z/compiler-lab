@@ -1,6 +1,6 @@
 %{
-    #define PRINT_TK false
-    #define YYSTYPE struct CST_node *
+    #define PRINT_TK true
+    
     
     #include "syntax.tab.h"
     #include "decls.h"
@@ -70,7 +70,7 @@ ID [a-zA-Z_][a-zA-Z0-9_]*
 %%
 \n   { yycolumn = 1;}
 {ws} {/* empty */}
-{STRUCT}     {yylval = creat_node(SYM(STRUCT), UNIQ_NODE, yylineno, NULL); return STRUCT;}
+{STRUCT}     {print_tk("STRUCT"); yylval = creat_node(SYM(STRUCT), UNIQ_NODE, yylineno, NULL); return STRUCT;}
 {RETURN}     {yylval = creat_node(SYM(RETURN), UNIQ_NODE, yylineno, NULL); return RETURN;}
 {IF}         {yylval = creat_node(SYM(IF), UNIQ_NODE, yylineno, NULL); return IF;}
 {ELSE}       {yylval = creat_node(SYM(ELSE), UNIQ_NODE, yylineno, NULL); return ELSE;}
@@ -117,30 +117,17 @@ ID [a-zA-Z_][a-zA-Z0-9_]*
               }
 {LCOMMENT}   {
 		//printf("LCOMMENT\n");
-		
-		char last, cur;
-		int init = 1, flag = 0;
-		last = input();
-		cur = input();
-		while(cur!='\0'){
-		    if(init==0) {
-		        //printf("Bad Match!\n");
-		        break;
-		    }else{
-		        if(last=='*' && cur=='/'){
-		            flag = 1;
-		            break;
-		        }else if(last=='/' && cur=='*'){
-		            break;
-		        }else if(last=='/' && cur=='/'){
-		            break;
-		        }
-		        last = cur;
-		        cur = input();
+		int pre=0, flag=0;
+		char c;
+		while((c=input()!='\0')){
+		    if(c==EOF) break;
+		    else if(c=='*') pre = 1;
+		    if(pre==1){
+		        if(c=='/') flag = 1;
+		        else if(c!='*') pre = 0;
 		    }
 		}
-		//if(flag) printf("Match/* */!\n");
-		if(!flag) error_msg(0,yylineno,"Didn't match /* !");
+		if(!flag) error_msg(0,yylineno,"Bad match /* !");
 	      }
 
 {RCOMMENT}   { error_msg(0,yylineno,yytext);}
