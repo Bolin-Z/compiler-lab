@@ -1,6 +1,7 @@
 %{  
     #include "syntax.tab.h"
     #include "decls.h"
+	#include "defs.h"
     #include <stdio.h>
     #include "cst.h"
 %}
@@ -14,6 +15,21 @@
         yylloc.first_column = yycolumn;                  \
         yylloc.last_column = yycolumn + yyleng - 1;      \
         yycolumn += yyleng;
+%}
+
+%{
+	#define page_size 1024
+	typedef struct c_stack{
+		bool empty;
+		size_t cur_page;
+		size_t cur_pos;
+		char ** page_list;
+	}c_stack;
+
+	c_stack * creat_stack();
+	void free_stack(c_stack* s);
+	void push_c(c_stack* s,char c);
+	char pop_c(c_stack* s);
 %}
 
 ws [ \f\r\t\v\n]
@@ -85,7 +101,20 @@ ID [a-zA-Z_][a-zA-Z0-9_]*
 {RB}         {yylval = creat_node(SYM(RB),       UNIQ_NODE,  yylineno, NULL);   return RB;}
 {LC}         {yylval = creat_node(SYM(LC),       UNIQ_NODE,  yylineno, NULL);   return LC;}
 {RC}         {yylval = creat_node(SYM(RC),       UNIQ_NODE,  yylineno, NULL);   return RC;}
-{COMMENT}    {char c = input(); yycolumn++; while(c!='\n'){c=input(); yycolumn++;} }
+{COMMENT}    {
+				char c;
+				while(true){
+					c = input();
+					yycolumn++;
+					if(c == '\n'){
+						yycolumn = 1;
+						break;
+					}else if(c == EOF){
+						yyterminate();
+						break;
+					}
+				}
+			 }
 {LCOMMENT}   {
 				char last, cur;
 				int init = 1, flag = 0;
@@ -113,5 +142,64 @@ ID [a-zA-Z_][a-zA-Z0-9_]*
 
 {RCOMMENT}   { error_msg('A',yylineno,yytext);}
 <<EOF>>      { yyterminate();}
-.            { error_msg('A',yylineno,yytext);}
+.            { error_msg('A',yylineno,"Mysterious character \"%s\".",yytext);}
 %%
+
+c_stack * creat_stack(){
+	c_stack * p = (c_stack*)malloc(sizeof(c_stack));
+	if(p){
+		p->cur_pos = 0;
+		p->cur_page = 0;
+		p->page_list = (char**)malloc(sizeof(char*));
+		p->page_list[p->cur_page] = (char*)malloc(page_size*sizeof(char));
+		p->empty = true;
+	}
+	return p;
+}
+
+void free_stack(c_stack* s){
+	size_t p = 0;
+	for(;p <= s->cur_page;p++)
+		free(s->page_list[p]);
+	free(s->page_list);
+	free(s);
+}
+
+void push_c(c_stack* s,char c){
+	if(s->cur_pos == page_size){
+		char ** new_list = (char**)malloc((s->cur_page+2)*sizeof(char*));
+		size_t p = 0;
+		for(;p <= s->cur_page;p++)
+			new_list[p] = s->page_list[p];
+		new_list[p] = (char*)malloc(page_size*sizeof(char));
+		free(s->page_list);
+		s->page_list = new_list;
+		s->cur_page += 1;
+		s->cur_pos = 0;
+	}
+	s->page_list[s->cur_page][s->cur_pos] = c;
+	s->cur_pos += 1;
+	if(s->empty) s->empty = false;
+}
+
+char pop_c(c_stack* s){
+	char c = 0;
+	if(!s->empty){
+		if(s->cur_pos == 0){
+			char** new_list = (char**) malloc((s->cur_page)*sizeof(char*));
+			size_t p = 0;
+			for(;p < cur_page;p++)
+				new_list[p] = s->page_list[p];
+			free(s->page_list[s->cur_page]);
+			free(s->page_list);
+			s->page_list = new_list;
+			s->cur_page -= 1;
+			s->cur_pos = page_size;
+		}
+		s->cur_pos -= 1;
+		c = s->page_list[s->cur_page][s->cur_pos];
+		if(s->cur_page == 0 && s->cur_pos == 0)
+			s->empty = true;
+	}
+	return c;
+}
