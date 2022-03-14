@@ -1,12 +1,13 @@
 %{
     #define PRINT_TK false
     #define YYSTYPE struct CST_node *
-
+    
     #include "syntax.tab.h"
     #include "decls.h"
     #include <stdio.h>
     #include "cst.h"
     
+    //extern struct CST_node * creat_node(int sym_type,int node_type,int lineno,const char* lexme);
 %}
 
 %option yylineno
@@ -69,45 +70,46 @@ ID [a-zA-Z_][a-zA-Z0-9_]*
 %%
 \n   { yycolumn = 1;}
 {ws} {/* empty */}
-{STRUCT}     {yylval = creat_node(STRUCT, UNIQ_NODE, yylineno, NULL); return STRUCT;}
-{RETURN}     {yylval = creat_node(RETURN, UNIQ_NODE, yylineno, NULL); return RETURN;}
-{IF}         {yylval = creat_node(IF, UNIQ_NODE, yylineno, NULL); return IF;}
-{ELSE}       {yylval = creat_node(ELSE, UNIQ_NODE, yylineno, NULL); return ELSE;}
-{WHILE}      {yylval = creat_node(WHILE, UNIQ_NODE, yylineno, NULL); return WHILE;}
-{TYPE}       {yylval = creat_node(TYPE, UNIQ_NODE, yylineno, NULL); return TYPE;}
-{EXPONENT}   { yylval = creat_node(FLOAT, FLOAT_NODE, yylineno, yytext); 
+{STRUCT}     {yylval = creat_node(SYM(STRUCT), UNIQ_NODE, yylineno, NULL); return STRUCT;}
+{RETURN}     {yylval = creat_node(SYM(RETURN), UNIQ_NODE, yylineno, NULL); return RETURN;}
+{IF}         {yylval = creat_node(SYM(IF), UNIQ_NODE, yylineno, NULL); return IF;}
+{ELSE}       {yylval = creat_node(SYM(ELSE), UNIQ_NODE, yylineno, NULL); return ELSE;}
+{WHILE}      {yylval = creat_node(SYM(WHILE), UNIQ_NODE, yylineno, NULL); return WHILE;}
+{TYPE}       {yylval = creat_node(SYM(TYPE), UNIQ_NODE, yylineno, NULL); return TYPE;}
+{EXPONENT}   { yylval = creat_node(SYM(FLOAT), FLOAT_NODE, yylineno, yytext); 
 		//printf("EXPONENT:%s\n",yytext);
 		return FLOAT;}
-{HEX}        { yylval = creat_node(INT, INT_NODE, yylineno, yytext);
+{HEX}        { yylval = creat_node(SYM(INT), INT_NODE, yylineno, yytext);
 		//printf("HEX:%s\n",yytext); 
 		return INT;}
-{OCT}        { yylval = creat_node(INT, INT_NODE, yylineno, yytext);
+{OCT}        { yylval = creat_node(SYM(INT), INT_NODE, yylineno, yytext);
 		//printf("OCT:%s\n",yytext); 
 		return INT;}
-{FLOAT}      { yylval = creat_node(FLOAT, FLOAT_NODE, yylineno, yytext);
+{FLOAT}      { yylval = creat_node(SYM(FLOAT), FLOAT_NODE, yylineno, yytext);
 		//printf("FLOAT:%s\n",yytext);
 		return FLOAT;}
-{INT}        { yylval = creat_node(INT, INT_NODE, yylineno, yytext);
-		//printf("Integer value %d\n", atoi(yytext)); RETURN(INT);}
-{ID}         {yylval = creat_node(ID, ID_NODE, yylineno, yytext); return ID;}
-{SEMI}       {yylval = creat_node(SEMI, UNIQ_NODE, yylineno, NULL); return SEMI;}
-{COMMA}      {yylval = creat_node(COMMA, UNIQ_NODE, yylineno, NULL); return COMMA;}
-{ASSIGNOP}   {yylval = creat_node(ASSIGNOP, UNIQ_NODE, yylineno, NULL); return ASSIGNOP;}
-{RELOP}      {yylval = creat_node(RELOP, MUL_NODE, yylineno, NULL); return RELOP;}
-{PLUS}       {yylval = creat_node(PLUS, UNIQ_NODE, yylineno, NULL); return PLUS;}
-{MINUS}      {yylval = creat_node(MINUS, UNIQ_NODE, yylineno, NULL); return MINUS;}
-{STAR}       {yylval = creat_node(STAR, UNIQ_NODE, yylineno, NULL); return STAR;}
-{DIV}        {yylval = creat_node(DIV, UNIQ_NODE, yylineno, NULL); return DIV;}
-{AND}        {yylval = creat_node(AND, UNIQ_NODE, yylineno, NULL); return AND;}
-{OR}         {yylval = creat_node(OR, UNIQ_NODE, yylineno, NULL); return OR;}
-{DOT}        {yylval = creat_node(DOT, UNIQ_NODE, yylineno, NULL); return DOT;}
-{NOT}        {yylval = creat_node(NOT, UNIQ_NODE, yylineno, NULL); return NOT;}
-{LP}         {yylval = creat_node(LP, UNIQ_NODE, yylineno, NULL); return LP;}
-{RP}         {yylval = creat_node(RP, UNIQ_NODE, yylineno, NULL); return RP;}
-{LB}         {yylval = creat_node(LB, UNIQ_NODE, yylineno, NULL); return LB;}
-{RB}         {yylval = creat_node(RB, UNIQ_NODE, yylineno, NULL); return RB;}
-{LC}         {yylval = creat_node(LC, UNIQ_NODE, yylineno, NULL); return LC;}
-{RC}         {yylval = creat_node(RC, UNIQ_NODE, yylineno, NULL); return RC;}
+{INT}        { yylval = creat_node(SYM(INT), INT_NODE, yylineno, yytext);
+		//printf("Integer value %d\n", atoi(yytext)); 
+		return INT;}
+{ID}         {yylval = creat_node(SYM(ID), ID_NODE, yylineno, yytext); return ID;}
+{SEMI}       {yylval = creat_node(SYM(SEMI), UNIQ_NODE, yylineno, NULL); return SEMI;}
+{COMMA}      {yylval = creat_node(SYM(COMMA), UNIQ_NODE, yylineno, NULL); return COMMA;}
+{ASSIGNOP}   {yylval = creat_node(SYM(ASSIGNOP), UNIQ_NODE, yylineno, NULL); return ASSIGNOP;}
+{RELOP}      {yylval = creat_node(SYM(RELOP), MUL_NODE, yylineno, NULL); return RELOP;}
+{PLUS}       {yylval = creat_node(SYM(PLUS), UNIQ_NODE, yylineno, NULL); return PLUS;}
+{MINUS}      {yylval = creat_node(SYM(MINUS), UNIQ_NODE, yylineno, NULL); return MINUS;}
+{STAR}       {yylval = creat_node(SYM(STAR), UNIQ_NODE, yylineno, NULL); return STAR;}
+{DIV}        {yylval = creat_node(SYM(DIV), UNIQ_NODE, yylineno, NULL); return DIV;}
+{AND}        {yylval = creat_node(SYM(AND), UNIQ_NODE, yylineno, NULL); return AND;}
+{OR}         {yylval = creat_node(SYM(OR), UNIQ_NODE, yylineno, NULL); return OR;}
+{DOT}        {yylval = creat_node(SYM(DOT), UNIQ_NODE, yylineno, NULL); return DOT;}
+{NOT}        {yylval = creat_node(SYM(NOT), UNIQ_NODE, yylineno, NULL); return NOT;}
+{LP}         {yylval = creat_node(SYM(LP), UNIQ_NODE, yylineno, NULL); return LP;}
+{RP}         {yylval = creat_node(SYM(RP), UNIQ_NODE, yylineno, NULL); return RP;}
+{LB}         {yylval = creat_node(SYM(LB), UNIQ_NODE, yylineno, NULL); return LB;}
+{RB}         {yylval = creat_node(SYM(RB), UNIQ_NODE, yylineno, NULL); return RB;}
+{LC}         {yylval = creat_node(SYM(LC), UNIQ_NODE, yylineno, NULL); return LC;}
+{RC}         {yylval = creat_node(SYM(RC), UNIQ_NODE, yylineno, NULL); return RC;}
 {COMMENT}    {
 		char c = input(); 
 		while(c!='\n'){c=input();}
@@ -122,7 +124,7 @@ ID [a-zA-Z_][a-zA-Z0-9_]*
 		cur = input();
 		while(cur!='\0'){
 		    if(init==0) {
-		        printf("Bad Match!\n");
+		        //printf("Bad Match!\n");
 		        break;
 		    }else{
 		        if(last=='*' && cur=='/'){
