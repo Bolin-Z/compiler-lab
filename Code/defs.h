@@ -37,7 +37,7 @@ static const char *const symtype2str[] = {
     "FLOAT", "COMMA", "WHILE", "RELOP", "MINUS",
     "STRUCT", "RETURN",
     "ASSIGNOP",
-    "Program", "ExtDefList", "ExtDef","Specifier", "FunDec", "Compst", "VarDec", "ExtDecList",
+    "Program", "ExtDefList", "ExtDef","Specifier", "FunDec", "CompSt", "VarDec", "ExtDecList",
     "StructSpecifier", "OptTag", "DefList", "Tag",
     "VarList", "ParamDec",
     "StmtList", "Stmt", "Exp",

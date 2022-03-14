@@ -9,7 +9,7 @@
     extern bool has_error;
 %}
 
-%define parse.error detailed
+%define parse.error verbose
 %locations
 
 %define api.value.type {struct CST_node *}
