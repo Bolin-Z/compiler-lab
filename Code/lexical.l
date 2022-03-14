@@ -110,37 +110,49 @@ ID [a-zA-Z_][a-zA-Z0-9_]*
 						yycolumn = 1;
 						break;
 					}else if(c == EOF){
-						yyterminate();
+						unput(c);
 						break;
 					}
 				}
 			 }
 {LCOMMENT}   {
-				char last, cur;
-				int init = 1, flag = 0;
-		        last = input();
-		        cur = input();
-				while(cur!='\0'){
-		    		if(init==0) {
-		        		break;
-		    		}else{
-		        		if(last=='*' && cur=='/'){
-		            		flag = 1;
-		            		break;
-		        		}else if(last=='/' && cur=='*'){
-		            		break;
-		        		}else if(last=='/' && cur=='/'){
-		            		break;
-		        		}
-		        		last = cur;
-		        		cur = input();
-		    		}
+				int last_column = yycolumn;
+				int last_line = yylineno;
+				bool match = false;
+				char last = input();
+				char cur = input();
+				if(last == '\0' || cur == '\0'){
+					error_msg('A',last_line,"Unmatched \"/*\".");
+					unput(cur); unput(last);
+					yycolumn = last_column;
+				}else{
+					yycolumn += 2;
+					c_stack * buf = creat_stack();
+					push_c(buf,last); push_c(buf,cur);
+					while(true){
+						if(last == '*' && cur == '/'){
+							match = true;
+							break;
+						}
+						last = cur; cur = input(); yycolumn++;
+						if(cur == '\n') yycolumn = 1;
+						else if(cur == '\0'){
+							while(buf->empty == false){	
+								unput(pop_c(buf));
+							}
+							yycolumn = last_column;
+							break;
+						}
+						push_c(buf,cur);
+					}
+					if(!match){
+						error_msg('A',last_line,"Unmatched \"/*\".");
+					}
+					free_stack(buf);
 				}
-				if(flag) printf("Match/* */!\n");
-				else error_msg('A',yylineno,"Didn't match /* !");
 	      	}
 
-{RCOMMENT}   { error_msg('A',yylineno,yytext);}
+{RCOMMENT}   { error_msg('A',yylineno,"Unmatched \"*/\".");}
 <<EOF>>      { yyterminate();}
 .            { error_msg('A',yylineno,"Mysterious character \"%s\".",yytext);}
 %%
@@ -188,7 +200,7 @@ char pop_c(c_stack* s){
 		if(s->cur_pos == 0){
 			char** new_list = (char**) malloc((s->cur_page)*sizeof(char*));
 			size_t p = 0;
-			for(;p < cur_page;p++)
+			for(;p < s->cur_page;p++)
 				new_list[p] = s->page_list[p];
 			free(s->page_list[s->cur_page]);
 			free(s->page_list);
