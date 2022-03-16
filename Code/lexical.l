@@ -84,12 +84,12 @@ ERROROCT 0[0-7]*[8-9]+[0-9]*
 {ID}         {yylval = creat_node(SYM(ID),       ID_NODE,    yylineno, yytext); return ID;}
 {EXPONENT}   {yylval = creat_node(SYM(FLOAT),    FLOAT_NODE, yylineno, yytext); return FLOAT;}
 {HEX}        {yylval = creat_node(SYM(INT),      INT_NODE,   yylineno, yytext); return INT;}
-{ERRORHEX}   {error_msg('A',yylineno,"Illegal hexadecimal number \'%s\'", yytext); yylval = 0; return INT;} 
+{ERRORHEX}   {error_msg('A',yylineno,"Illegal hexadecimal number \'%s\'.", yytext); yylval = NULL; return INT;} 
 {OCT}        {yylval = creat_node(SYM(INT),      INT_NODE,   yylineno, yytext); return INT;}
-{ERROROCT}   {error_msg('A',yylineno,"Illegal octal number \'%s\'", yytext); yylval = 0; return INT;}
+{ERROROCT}   {error_msg('A',yylineno,"Illegal octal number \'%s\'.", yytext); yylval = NULL; return INT;}
 {FLOAT}      {yylval = creat_node(SYM(FLOAT),    FLOAT_NODE, yylineno, yytext); return FLOAT;}
 {INT}        {yylval = creat_node(SYM(INT),      INT_NODE,   yylineno, yytext); return INT;}
-{ERRORINT}   {error_msg('A',yylineno,"Illegal number \'%s\'", yytext); yylval = 0; return INT;}
+{ERRORINT}   {error_msg('A',yylineno,"Illegal number \'%s\'.", yytext); yylval = NULL; return INT;}
 {SEMI}       {yylval = creat_node(SYM(SEMI),     UNIQ_NODE,  yylineno, NULL);   return SEMI;}
 {COMMA}      {yylval = creat_node(SYM(COMMA),    UNIQ_NODE,  yylineno, NULL);   return COMMA;}
 {ASSIGNOP}   {yylval = creat_node(SYM(ASSIGNOP), UNIQ_NODE,  yylineno, NULL);   return ASSIGNOP;}
