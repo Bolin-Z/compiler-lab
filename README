@@ -1,7 +1,11 @@
-defs.h     : 结构体，全局变量，等定义
-decls.h    : 函数接口的声明
-error.c    : 错误信息输出相关函数
-cst.c      : 语法分析树相关函数实现
-lexical.l  : 词法分析flex文件
-syntax.y   : 语法分析bison文件
-main.c     : 主函数入口
+defs.h       : type variable define etc.
+decls.h      : functions declaration
+syntax.y     : bison file
+lexical.l    : flex file
+error.c      : error handling
+cst.h/c      : concrete syntax tree
+semantic.h/c : semantic analysis
+sym.h/c      : id attribute & symbol table
+type.h/c     : type system
+main.c       : main function
+
