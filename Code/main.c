@@ -5,7 +5,7 @@
 #include"cst.h"
 
 extern void yyrestart(FILE*);
-bool has_error;
+extern bool has_error;
 struct CST_node * cst_root;
 
 int main(int argc,char* argv[]){

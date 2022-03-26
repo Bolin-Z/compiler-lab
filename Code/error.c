@@ -1,6 +1,6 @@
 #include"decls.h"
 
-extern bool has_error;
+bool has_error;
 
 
 void error_msg(char error_type,int line_num,const char * format_msg, ...){
