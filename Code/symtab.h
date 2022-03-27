@@ -4,50 +4,52 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<stdbool.h>
+#include<string.h>
 #include"typesys.h"
 
-# define SYMSTACKSIZE 256
-# define HASHTABLESIZE 256
-# define SCOPESTACKSIZE 16
+/* Macro related to hashlist */
+# define HASHTABLESIZE 1024 // 0x400
+# define NIL -1
+# define DUMMYIDX 0
 
-extern SymbolTable symtab;
+# define DEFINE_STACK(type,size) \
+\
+    typedef struct type##Stack{ \
+        type ** stack;          \
+        int idx;                \
+        int curidx;             \
+        int curstack;           \
+        size_t capacity;        \
+        size_t numofstack;      \
+    } type##Stack;              \
+    const size_t type##stacksize = size;
 
 typedef struct Symbol{
-    /* fields related to Symbol table */
-    char* _id;
-    size_t pre;
-    size_t nxt;
-    /* fields contains infomation of the symbol */
-    Attribute _attribute;
+    char* id;
+    int pre,nxt;
+    Attribute attribute;
 } Symbol;
 
-typedef struct SymbolStack{
-    Symbol * _stack;
-    size_t cur;
-    size_t _stacksize;
-} SymbolStack;
-
-typedef struct SymbolHashTable{
-    size_t HashList[HASHTABLESIZE];
-} SymbolHashTable;
-
 typedef struct Scope{
-    char * ScopeName;
-    size_t Scopeidx;
+    char * scopename;
+    int scopebeginidx;
 } Scope;
 
-typedef struct ScopeStack{
-    Scope * _stack;
-    size_t cur;
-    size_t _stacksize;
-} ScopeStack;
+DEFINE_STACK(Symbol,256)
+DEFINE_STACK(Scope,256)
 
 typedef struct SymbolTable{
-    SymbolHashTable _hashtable;
-    SymbolStack _symstack;
-    ScopeStack _scopestack;
+    SymbolHashTable symhtable;
+    SymbolStack * symstack;
+    ScopeStack * scopstack;
 } SymbolTable;
 
+/* point to the idx of symbol in stack */
+typedef struct SymbolHashTable{
+    int hashlist[HASHTABLESIZE];
+} SymbolHashTable;
+
+/* TODO() */
 typedef struct Attribute{
     enum {ERROR,VARIABLE,FUNCTION,TYPENAME} IdClass;
     TypeDescriptor * _idtype;
@@ -59,13 +61,16 @@ typedef struct Attribute{
 } Attribute;
 
 /* API */
-int initSymbolTable();
 
-size_t OpenScope(char* ScopeName);
-void CloseScope();
-Scope * CurScope();
+/* Creat and initialize SymbolTable object, return NULL if failed. */
+SymbolTable * CreatSymbolTable();
+void DestorySymbolTable(SymbolTable* s);
 
-Symbol * Insert(char* name);
-Symbol * LookUp(char* name, bool curscope);
+Scope * OpenScope(SymbolTable* s, char* ScopeName);
+void CloseScope(SymbolTable* s);
+Scope * CurScope(SymbolTable* s);
+
+Symbol * Insert(SymbolTable* s, char* name);
+Symbol * LookUp(SymbolTable* s, char* name);
 
 #endif
