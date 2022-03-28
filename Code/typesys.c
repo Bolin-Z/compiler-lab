@@ -11,10 +11,10 @@ TypeDescriptor * BasicError(){return BasicTypeError;}
 void CreatTypeSystem(){
     BasicTypeInt = CreatTypeDescriptor();
     BasicTypeInt->typeform = BASIC;
-    BasicTypeInt->basic = INT;
+    BasicTypeInt->_basic = INT;
     BasicTypeFloat = CreatTypeDescriptor();
     BasicTypeFloat->typeform = BASIC;
-    BasicTypeFloat->basic = FLOAT;
+    BasicTypeFloat->_basic = FLOAT;
     BasicTypeError = CreatTypeDescriptor();
     BasicTypeError->typeform = ERROR;
 }
@@ -84,26 +84,66 @@ FieldList * CreatFieldList(char * fieldname, TypeDescriptor * fieldtype, FieldLi
 
 TypeDescriptor * CreatArrayAtOnce(TypeDescriptor * basetype, int dimension, ...){
     TypeDescriptor * _array_ = NULL;
-    TypeDescriptor * nxt_dim = NULL;
+    TypeDescriptor * pre = NULL;
     bool mallocerror = false;
     va_list ap;
     va_start(ap,dimension);
-    for(int i = 0;i < dimension;i++){
+    for(int i = 1;i <= dimension;i++){
         TypeDescriptor * t = CreatTypeDescriptor();
         if(t == NULL){
             mallocerror = true;
             break;
         }
-        if(i == 0) _array_ = t;
-        
+        t->typeform = ARRAY;
+        t->_array.elem = (i == dimension) ? (basetype) : (NULL);
+        t->_array.size = va_arg(ap,int);
+        if(pre) pre->_array.elem = t;
+        else _array_ = t;
+        pre = t;
     }
     va_end(ap);
     if(mallocerror){
-        while(_array_ != NULL){
-            nxt_dim = _array_->_array.elem;
+        while( _array_ != NULL){
+            TypeDescriptor * nxt = _array_->_array.elem;
             DestoryTypeDescriptor(_array_);
-            _array_ = nxt_dim;
+            _array_ = nxt;
         }
     }
     return _array_;
+}
+
+TypeDescriptor * CreatStructureAtOnce(int fieldscnt, ...){
+    FieldList * _head_ = NULL;
+    FieldList * pre = NULL;
+    bool mallocerror = false;
+    va_list ap;
+    va_start(ap,fieldscnt);
+    for(int i = 1;i <= fieldscnt;i++){
+        char * _name_ = va_arg(ap,char*);
+        TypeDescriptor * _type_ = va_arg(ap,TypeDescriptor*); 
+        FieldList * t = CreatFieldList(_name_,_type_,NULL);
+        if(t == NULL){
+            mallocerror = true;
+            break;
+        }
+        if(pre) pre->nextfield = t;
+        else _head_ = t;
+        pre = t;
+    }
+    va_end(ap);
+    TypeDescriptor * _structure_ = CreatTypeDescriptor();
+    if(_structure_){
+        _structure_->typeform = STRUCTURE;
+        _structure_->_structure = _head_;
+    }else{
+        mallocerror = true;
+    }
+    if(mallocerror){
+        while( _head_ != NULL){
+            FieldList * nxt = _head_->nextfield;
+            free(_head_);
+            _head_ = nxt;
+        }
+    }
+    return _structure_;
 }

@@ -57,7 +57,7 @@ typedef struct Attribute{
         /* IdClass == VARIABLE */
         /* empty */
         /* IdClass == FUNCTION */
-        struct{int Argc; TypeDescriptor** ArgTypeList;} Func;
+        struct{int Argc; TypeDescriptor** ArgTypeList; bool defined;} Func;
         /* IdClass == TYPENAME */
         /* empty */
     } Info;
