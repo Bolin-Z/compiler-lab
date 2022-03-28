@@ -59,4 +59,6 @@ TypeDescriptor * BasicInt();
 TypeDescriptor * BasicFloat();
 TypeDescriptor * BasicError();
 
+bool IsEqualType(TypeDescriptor * a,TypeDescriptor * b);
+
 #endif  

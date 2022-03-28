@@ -147,3 +147,27 @@ TypeDescriptor * CreatStructureAtOnce(int fieldscnt, ...){
     }
     return _structure_;
 }
+
+bool IsEqualType(TypeDescriptor * a,TypeDescriptor * b){
+    if(a->typeform == b->typeform){
+        switch(a->typeform){
+            case BASIC : 
+                return (a->_basic == b->_basic);
+            case ARRAY :
+                return IsEqualType(a->_array.elem,b->_array.elem);
+            case STRUCTURE :
+                FieldList * ptra = a->_structure;
+                FieldList * ptrb = b->_structure;
+                while((ptra!=NULL)&&(ptrb!=NULL)){
+                    if(!IsEqualType(ptra->fieldtype,ptrb->fieldtype)) break;
+                    ptra = ptra->nextfield;
+                    ptrb = ptrb->nextfield;
+                }
+                return ((ptra == NULL)&&(ptrb == NULL));
+            case ERROR :
+            default :
+                break;
+        }
+    }
+    return false;
+}
