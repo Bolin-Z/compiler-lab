@@ -39,12 +39,14 @@ SymbolTable * CreatSymbolTable(){
     for(int i = 0;i < HASHTABLESIZE;i++)
         st->symhtable.hashlist[i] = DUMMYIDX;
     Symbol* dummy = PushSymbolStack(st);
+    CreatTypeSystem();
     return st;
 }
 
 void DestorySymbolTable(SymbolTable * s){
     DestorySymbolStack(s->symstack);
     DestoryScopeStack(s->scopstack);
+    DestoryTypeSystem();
     free(s);
 }
 
@@ -160,7 +162,7 @@ void DestorySymbol(Symbol* t){
 
 void DestoryScope(Scope* t){
     free(t->scopename);
-    t->scopebeginidx = 0;
+    t->scopebeginidx = NIL;
 }
 
 Scope * OpenScope(SymbolTable* s, char* ScopeName){

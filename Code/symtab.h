@@ -25,7 +25,7 @@
     const size_t type##stacksize = size;
 
 typedef struct Symbol{
-    char* id; // can point to the id field of cst_id_node
+    char* id; // point to the id field of cst_id_node
     int pre,nxt;
     Attribute attribute;
 } Symbol;
