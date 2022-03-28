@@ -55,11 +55,12 @@ typedef struct Attribute{
     TypeDescriptor * _idtype;
     union{
         /* IdClass == VARIABLE */
-        /* empty */
+        /* _idtype set the type of id */
         /* IdClass == FUNCTION */
+        /* _idtype record the type of return val */
         struct{int Argc; TypeDescriptor** ArgTypeList; bool defined;} Func;
         /* IdClass == TYPENAME */
-        /* empty */
+        /* _idtype record the type id defined */
     } Info;
 } Attribute;
 
