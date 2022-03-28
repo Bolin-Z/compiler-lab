@@ -1,8 +1,6 @@
 #include "symtab.h"
 
 unsigned int hash_pjw(char* name);
-SymbolTable * CreatSymbolTable();
-void DestorySymbolTable(SymbolTable* s);
 
 SymbolStack * CreatSymbolStack();
 void DestorySymbolStack(SymbolStack* s);
@@ -144,7 +142,20 @@ DEFINE_STACK_FUNCTION(Symbol)
 DEFINE_STACK_FUNCTION(Scope)
 
 void DestorySymbol(Symbol* t){
-    /* TODO */
+    t->id = NULL;
+    t->pre = t->nxt = DUMMYIDX;
+    switch(t->attribute.IdClass){
+        case FUNCTION :
+            for(int i = 0;i < t->attribute.Info.Func.Argc;i++)
+                DestoryTypeDescriptor(t->attribute.Info.Func.ArgTypeList[i]);
+            free(t->attribute.Info.Func.ArgTypeList);
+            t->attribute.Info.Func.Argc = 0;
+            break;
+        default : /* Do nothing */ 
+            break;
+    }
+    t->attribute.IdClass = NONE;
+    DestoryTypeDescriptor(t->attribute._idtype);
 }
 
 void DestoryScope(Scope* t){
@@ -173,9 +184,17 @@ void CloseScope(SymbolTable* s){
     Scope * curscope = CurScope(s);
     int top = TopIdxOfSymbolStack(s->symstack);
     while(top >= curscope->scopebeginidx){
-        TODOHERE
+        Symbol * top_symbol = AccessSymbolStack(s->symstack,top);
+        /* The top-most symbol on stack must be the first symbol of one of the hashlist */
+        if(top_symbol->nxt != DUMMYIDX){
+            Symbol * sibiling = AccessSymbolStack(s->symstack,top_symbol->nxt);
+            sibiling->pre = top_symbol->pre;
+        }
+        s->symhtable.hashlist[top_symbol->pre + HASHTABLESIZE] = top_symbol->nxt;
+        PopSymbolStack(s->symstack);
         top--;
     }
+    PopScopeStack(s->scopstack);
 }
 
 Scope * CurScope(SymbolTable* s){

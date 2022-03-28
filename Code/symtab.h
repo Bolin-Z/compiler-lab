@@ -25,7 +25,7 @@
     const size_t type##stacksize = size;
 
 typedef struct Symbol{
-    char* id;
+    char* id; // can point to the id field of cst_id_node
     int pre,nxt;
     Attribute attribute;
 } Symbol;
@@ -51,13 +51,16 @@ typedef struct SymbolHashTable{
 
 /* TODO() */
 typedef struct Attribute{
-    enum {ERROR,VARIABLE,FUNCTION,TYPENAME} IdClass;
+    enum {NONE,VARIABLE,FUNCTION,TYPENAME} IdClass;
     TypeDescriptor * _idtype;
-    // type
     union{
-        int dummy;
-        float dummy2;
-    };
+        /* IdClass == VARIABLE */
+        /* empty */
+        /* IdClass == FUNCTION */
+        struct{int Argc; TypeDescriptor** ArgTypeList;} Func;
+        /* IdClass == TYPENAME */
+        /* empty */
+    } Info;
 } Attribute;
 
 /* API */

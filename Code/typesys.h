@@ -4,12 +4,14 @@
 typedef struct TypeDescriptor{
     enum {BASIC, ARRAY, STRUCTURE, ERROR} typeform;
     union{
-        /* typeform == Basic */
+        /* typeform == BASIC */
         enum {INT,FLOAT} basic;
-        /* typeform == array */
+        /* typeform == ARRAY */
         struct {TypeDescriptor * elem; size_t size;} _array;
-        /* typeform == structure */
+        /* typeform == STRUCTURE */
         FieldList * _structure;
+        /* typeform == ERROR */
+        /* empty */
     };
 } TypeDescriptor;
 
@@ -18,5 +20,8 @@ typedef struct FieldList{
     TypeDescriptor * fieldtype;
     FieldList * nextfield;
 } FieldList;
+
+TypeDescriptor * CreatTypeDescriptor();
+void DestoryTypeDescriptor(TypeDescriptor *);
 
 #endif
