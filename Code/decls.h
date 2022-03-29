@@ -12,4 +12,8 @@
 // handle error msg
 void error_msg(char error_type,int line_num,const char * format_msg, ...);
 
+void ReportSemanticError(int error_num,int line_num);
+void SetUndifinedFunc(int line_num,char * funcname);
+void UnsetUndifinedFunc(char * funcname);
+
 #endif

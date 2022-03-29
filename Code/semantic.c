@@ -55,7 +55,7 @@ SA(void, ExtDef){
 SA(TypeDescriptor*, Specifier){
     switch(get_symtype(n->child_list[0]->compact_type)){
         case SYM(TYPE) : 
-            struct CST_mul_node * cur = (struct CST_mul_node)(n->child_list[0]);
+            struct CST_mul_node * cur = (struct CST_mul_node * )(n->child_list[0]);
             switch(cur->tktype){
                 case TK(INT) : return BasicInt();
                 case TK(FLOAT) : return BasicFloat();
