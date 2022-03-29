@@ -31,20 +31,7 @@
     } type##Stack;                         \
     const size_t type##pagesize = maxsize; \
 \
-    void Destory##type(type* t);                \
-\
-    type##Stack * Creat##type##Stack();         \
-\
-    void Destory##type##Stack(type##Stack * s); \
-\
-    type* Push##type##Stack(type##Stack * s);   \
-\
-    void Pop##type##Stack(type##Stack * s);     \
-\
-    type* Access##type##Stack(type##Stack * s,int index); \
-\
-    int TopIdxOf##type##Stack(type##Stack * s);
-
+    void Destory##type(type* t);
 
 # define DEFINE_RASTACK_FUNCTION(type) \
 \
@@ -52,7 +39,7 @@
         type##Stack * s = (type##Stack *)malloc(sizeof(type##Stack));                   \
         if(s){                                                                          \
             s->capacity = type##pagesize;                                               \
-            s->numofstack = 1;                                                          \
+            s->numofpages = 1;                                                          \
             s->idx = 0;                                                                 \
             s->curidx = 0;                                                              \
             s->curpage = 0;                                                             \
@@ -76,7 +63,7 @@
             }                                                                           \
         }                                                                               \
         for(int i = 0;i < s->curidx;i++){                                               \
-            Destory##type(&(s->stack[s->curpage][i]));                                  \
+            Destory##type(&(s->pages[s->curpage][i]));                                  \
         }                                                                               \
         for(int i = 0;i < (int)(s->numofpages);i++){                                    \
             free(s->pages[i]);                                                          \

@@ -51,7 +51,9 @@ typedef struct Attribute{
 /* Structure to realize nested scope functions */
 typedef struct Scope{
     char * scopename;
+    /* Indicate idx of Symbol that is visible by current scope [b,e) */
     int scopebeginidx;
+    int scopeendidx;
 } Scope;
 
 SymbolTable * CreatSymbolTable();
@@ -63,6 +65,8 @@ Scope * CurScope(SymbolTable* s);
 
 Symbol * Insert(SymbolTable* s, char* name);
 Symbol * LookUp(SymbolTable* s, char* name);
+Symbol * Access(SymbolTable* s, int index);
+int GetIndex(SymbolTable* s, Symbol * id);
 
 //                              The image of SymbolTable
 //

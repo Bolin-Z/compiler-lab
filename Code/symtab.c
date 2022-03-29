@@ -1,6 +1,8 @@
 #include "symtab.h"
 
 unsigned int hash_pjw(char* name);
+DEFINE_RASTACK_FUNCTION(Symbol)
+DEFINE_RASTACK_FUNCTION(Scope)
 
 /* Hash Function Designed by P.J. Weinberger */
 unsigned int hash_pjw(char* name){
@@ -47,23 +49,26 @@ void DestorySymbol(Symbol* t){
                 DestoryTypeDescriptor(t->attribute.Info.Func.ArgTypeList[i]);
             free(t->attribute.Info.Func.ArgTypeList);
             t->attribute.Info.Func.Argc = 0;
+            t->attribute.Info.Func.defined = false;
             break;
         default : /* Do nothing */ 
             break;
     }
     t->attribute.IdClass = NONE;
-    DestoryTypeDescriptor(t->attribute._idtype);
+    DestoryTypeDescriptor(t->attribute.IdType);
 }
 
 void DestoryScope(Scope* t){
     free(t->scopename);
-    t->scopebeginidx = NIL;
+    t->scopebeginidx = -1;
+    t->scopeendidx = -1;
 }
 
 Scope * OpenScope(SymbolTable* s, char* ScopeName){
     Scope * newScope = PushScopeStack(s->scopstack);
     if(newScope){
         newScope->scopebeginidx = s->symstack->idx;
+        newScope->scopeendidx = newScope->scopebeginidx;
         if(ScopeName){
             int len = (int)(strlen(ScopeName)+1);
             newScope->scopename = (char*)malloc(len*sizeof(char));
@@ -80,9 +85,10 @@ Scope * OpenScope(SymbolTable* s, char* ScopeName){
 void CloseScope(SymbolTable* s){
     Scope * curscope = CurScope(s);
     int top = TopIdxOfSymbolStack(s->symstack);
+    /* always close the top-most scope */
     while(top >= curscope->scopebeginidx){
         Symbol * top_symbol = AccessSymbolStack(s->symstack,top);
-        /* The top-most symbol on stack must be the first symbol of one of the hashlist */
+        /* The top-most symbol on stack must be the first symbol of one of the hashlists. */
         if(top_symbol->nxt != DUMMYIDX){
             Symbol * sibiling = AccessSymbolStack(s->symstack,top_symbol->nxt);
             sibiling->pre = top_symbol->pre;
@@ -136,5 +142,20 @@ Symbol * Insert(SymbolTable* s, char* name){
         newsymbol->nxt = nxtidx;
     }
     s->symhtable.hashlist[hashval] = curidx;
+    cur->scopeendidx += 1;
     return newsymbol;
+}
+
+/* access symbol by index */
+Symbol * Access(SymbolTable * s, int index){
+    return AccessSymbolStack(s->symstack,index);
+}
+
+int GetIndex(SymbolTable* s, Symbol * id){
+    if(id->pre < 0){
+        return s->symhtable.hashlist[id->pre + HASHTABLESIZE];
+    }else{
+        Symbol * brother = Access(s,id->pre);
+        return brother->nxt;
+    }
 }
