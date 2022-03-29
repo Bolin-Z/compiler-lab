@@ -6,23 +6,26 @@
 #include<stdbool.h>
 #include<string.h>
 #include"typesys.h"
+#include"rastack.h"
 
 /* Macro related to hashlist */
 # define HASHTABLESIZE 1024 // 0x400
-# define NIL -1
 # define DUMMYIDX 0
 
-# define DEFINE_STACK(type,size) \
-\
-    typedef struct type##Stack{ \
-        type ** stack;          \
-        int idx;                \
-        int curidx;             \
-        int curstack;           \
-        size_t capacity;        \
-        size_t numofstack;      \
-    } type##Stack;              \
-    const size_t type##stacksize = size;
+/* Structure to realize the Store and Search Functions of symbol table */
+typedef struct SymbolTable{
+    SymbolHashTable symhtable;
+    SymbolStack * symstack;
+    ScopeStack * scopstack;
+} SymbolTable;
+
+DEFINE_RASTACK(Symbol,256)
+DEFINE_RASTACK(Scope,256)
+
+/* Structure to realize the hash-list */
+typedef struct SymbolHashTable{
+    int hashlist[HASHTABLESIZE];
+} SymbolHashTable;
 
 typedef struct Symbol{
     char* id; // point to the id field of cst_id_node
@@ -30,43 +33,27 @@ typedef struct Symbol{
     Attribute attribute;
 } Symbol;
 
+/* Attribute infomation of the identifier */
+typedef struct Attribute{
+    enum {NONE,VARIABLE,FUNCTION,TYPENAME} IdClass;
+    TypeDescriptor * IdType;
+    union{
+        /* IdClass == VARIABLE */
+        /* IdType stores the type of id */
+        /* IdClass == FUNCTION */
+        /* IdType stores the type of return value */
+        struct{int Argc; TypeDescriptor** ArgTypeList; bool defined;} Func;
+        /* IdClass == TYPENAME */
+        /* IdType stores the type that the typename defined */
+    } Info;
+} Attribute;
+
+/* Structure to realize nested scope functions */
 typedef struct Scope{
     char * scopename;
     int scopebeginidx;
 } Scope;
 
-DEFINE_STACK(Symbol,256)
-DEFINE_STACK(Scope,256)
-
-typedef struct SymbolTable{
-    SymbolHashTable symhtable;
-    SymbolStack * symstack;
-    ScopeStack * scopstack;
-} SymbolTable;
-
-/* point to the idx of symbol in stack */
-typedef struct SymbolHashTable{
-    int hashlist[HASHTABLESIZE];
-} SymbolHashTable;
-
-/* TODO() */
-typedef struct Attribute{
-    enum {NONE,VARIABLE,FUNCTION,TYPENAME} IdClass;
-    TypeDescriptor * _idtype;
-    union{
-        /* IdClass == VARIABLE */
-        /* _idtype set the type of id */
-        /* IdClass == FUNCTION */
-        /* _idtype record the type of return val */
-        struct{int Argc; TypeDescriptor** ArgTypeList; bool defined;} Func;
-        /* IdClass == TYPENAME */
-        /* _idtype record the type id defined */
-    } Info;
-} Attribute;
-
-/* API */
-
-/* Creat and initialize SymbolTable object, return NULL if failed. */
 SymbolTable * CreatSymbolTable();
 void DestorySymbolTable(SymbolTable* s);
 
@@ -76,5 +63,22 @@ Scope * CurScope(SymbolTable* s);
 
 Symbol * Insert(SymbolTable* s, char* name);
 Symbol * LookUp(SymbolTable* s, char* name);
+
+//                              The image of SymbolTable
+//
+//                 | .  |
+//    +---+        + .  +   
+//    |   |---+    | .  |   
+//    +---+   |    +----+   
+//    |   |   + +->| id |-----+     |  . |
+//    +---+   | |  +----+     |     +  . +
+//    |   |   +--->| id |---+ |     |  . |
+//    +---+     |  +----+   | |     +----+
+//    |   |-----+  | id |<--+ |  +--| S2 |
+//    +---+        +----+<----|--+  +----+
+//    |   |        |    |     | +---| S1 |
+//    +---+        +----+     v |   +----+
+//   HashList    SymbolStack    v  ScopeStack
+//
 
 #endif

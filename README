@@ -1,11 +1,14 @@
-defs.h       : type variable define etc.
-decls.h      : functions declaration
+Project-1 related :
 syntax.y     : bison file
 lexical.l    : flex file
 error.c      : error handling
 cst.h/c      : concrete syntax tree
+Project-2 related :
+rastack.h    : a random access stack templete
 semantic.h/c : semantic analysis
 sym.h/c      : id attribute & symbol table
 type.h/c     : type system
+Others:
+defs.h       : type variable define etc.
+decls.h      : functions declaration
 main.c       : main function
-
