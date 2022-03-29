@@ -30,27 +30,50 @@ TypeDescriptor * CreatTypeDescriptor(){
 }
 
 void DestoryTypeDescriptor(TypeDescriptor * s){
-    switch(s->typeform){
-        case BASIC : /* Do nothing */
-        case ERROR : /* Do nothing */
-            break;
-        case ARRAY :
-            DestoryTypeDescriptor(s->_array.elem);
-            free(s);
-            break;
-        case STRUCTURE :
-            FieldList * cur = s->_structure;
-            while(cur != NULL){
-                FieldList * nxt = cur->nextfield;
-                DestoryTypeDescriptor(cur->fieldtype);
-                free(cur);
-                cur = nxt;
-            }
-            free(s);
-            break;
-        default :
-            break;
+    if(s){
+        switch(s->typeform){
+            case BASIC : /* Do nothing */
+            case ERROR : /* Do nothing */
+                break;
+            case ARRAY :
+                DestoryTypeDescriptor(s->_array.elem);
+                free(s);
+                break;
+            case STRUCTURE :
+                FieldList * cur = s->_structure;
+                while(cur != NULL){
+                    FieldList * nxt = cur->nextfield;
+                    DestoryTypeDescriptor(cur->fieldtype);
+                    free(cur);
+                    cur = nxt;
+                }
+                free(s);
+                break;
+            default :
+                break;
+        }
     }
+}
+
+TypeDescriptor * CopyTypeDescriptor(TypeDescriptor * src, TypeDescriptor * dst){
+    if(src){
+        DestoryTypeDescriptor(dst);
+        dst = CreatTypeDescriptor();
+        if(dst){
+            switch(src->typeform){
+                case BASIC :
+                    dst->_basic = src->_basic;
+                    break;
+                case ARRAY :
+                    
+                case ERROR :
+                default :
+                    break;
+            }
+            dst->typeform = src->typeform;
+        }
+    }
+    return dst;
 }
 
 TypeDescriptor * CreatArrayDescriptor(TypeDescriptor * arraytype, int arraysize){

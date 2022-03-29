@@ -33,6 +33,7 @@ void DestoryTypeSystem();
 
 TypeDescriptor * CreatTypeDescriptor();
 void DestoryTypeDescriptor(TypeDescriptor *);
+TypeDescriptor * CopyTypeDescriptor(TypeDescriptor * src, TypeDescriptor * dst);
 
 TypeDescriptor * CreatArrayDescriptor(TypeDescriptor * arraytype, int size);
 /* 

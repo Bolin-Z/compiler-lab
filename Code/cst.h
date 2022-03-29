@@ -43,6 +43,7 @@ enum{
     NODE_MASK = 0xf
 };
 
+/* concrete syntax tree node */
 struct CST_node{
     int compact_type;
     int lineno;
@@ -50,9 +51,16 @@ struct CST_node{
     struct CST_node ** child_list;
 };
 
+struct CST_int_node;
+struct CST_float_node;
+struct CST_id_node;
+struct CST_mul_node;
+struct CST_uniq_node;
+
 /* Interface */
 
 /* Manipulation */
+
 struct CST_node * creat_node(int sym_type,int node_type,int lineno,const char* lexme);
 bool add_child(struct CST_node* father,size_t cnt,...);
 void destory_node(struct CST_node *);
@@ -60,12 +68,14 @@ void destory_tree(struct CST_node *);
 struct CST_node * copy_node(struct CST_node *);
 
 /* Utility */
+
 int get_symtype(int compact_type);
 int get_nodetype(int compact_type);
 bool is_token(int compact_type);
 int str2tktype(const char * op);
 
 /* Action */
+
 void print_CST(struct CST_node *,int);
 
 #endif
