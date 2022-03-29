@@ -60,18 +60,32 @@ SA(TypeDescriptor*, Specifier){
                 case TK(INT) : return BasicInt();
                 case TK(FLOAT) : return BasicFloat();
                 default : /* error */
-                    return NULL;
+                    return BasicError();
             }
         case SYM(StructSpecifier) :
             struct CST_node * st = n->child_list[0];
             switch(st->child_cnt){
                 case 2 : /* STRUCT Tag */
-                    
+                    struct CST_node * tag = st->child_list[1];
+                    struct CST_id_node * id = (struct CST_id_node *)(tag->child_list[0]);
+                    Symbol*  type = LookUp(systab,id->ID);
+                    if(!type){
+                        ReportSemanticError(0,0,"structure type was not defined");
+                        return BasicError();
+                    }else{
+                        if(type->attribute.IdClass != TYPENAME){
+                            ReportSemanticError(0,0,"name has been used");
+                            return BasicError();
+                        }else{
+                            /* WARNING : Copy or Pointer? */
+                            return type->attribute.IdType;
+                        }
+                    }
                 case 5 : /* STRUCT OptTag LC DefList RC */
                 default : /* error */
-                    return NULL;
+                    return BasicError();
             }
         default : /* error */
-            return NULL;
+            return BasicError();
     }
 }
