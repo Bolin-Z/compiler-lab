@@ -8,53 +8,43 @@
 #include<stdio.h>
 #include<stdbool.h>
 
+/* Object that describe type. */
 typedef struct TypeDescriptor{
-    enum {ERROR, BASIC, ARRAY, STRUCTURE} typeform;
+    enum {ERROR, BASIC, ARRAY, STRUCTURE} TypeClass;
     union{
-        /* typeform == BASIC */
-        enum {INT,FLOAT} _basic;
-        /* typeform == ARRAY */
-        struct {TypeDescriptor * elem; int size;} _array;
-        /* typeform == STRUCTURE */
-        FieldList * _structure;
-        /* typeform == ERROR */
+        /* TypeClass == BASIC */
+        enum {INT,FLOAT} Basic;
+        /* TypeClass == ARRAY */
+        struct {TypeDescriptor * elem; int size;} Array;
+        /* TypeClass == STRUCTURE */
+        FieldList * Structure;
+        /* TypeClass == ERROR */
         /* empty */
     };
 } TypeDescriptor;
 
+/* Auxiliary data structure to help describe Structure type. */
 typedef struct FieldList{
-    char * fieldname; // point to the id field of cst_id_node
-    TypeDescriptor * fieldtype;
-    FieldList * nextfield;
+    char * FieldName; // points to the id field of cst_id_node
+    TypeDescriptor * FieldType;
+    FieldList * NextField;
 } FieldList;
 
 void CreatTypeSystem();
 void DestoryTypeSystem();
 
 TypeDescriptor * CreatTypeDescriptor();
-void DestoryTypeDescriptor(TypeDescriptor *);
-TypeDescriptor * CopyTypeDescriptor(TypeDescriptor * src, TypeDescriptor * dst);
+void DestoryTypeDescriptor(TypeDescriptor * s);
+TypeDescriptor * CopyTypeDescriptor(TypeDescriptor * src);
 
-TypeDescriptor * CreatArrayDescriptor(TypeDescriptor * arraytype, int size);
-/* 
-    TypeDescriptor * CreatArrayAtOnce(TypeDescriptor * basetype, int dimension, ...);
-    Return an array type descriptor on success, NULL if failed.
-    basetype:  basic element type of array
-    dimension: number of dimensions
-    ... :      list of sizes of each dimension
-               format: size1, size2, size3, ...
-*/
-TypeDescriptor * CreatArrayAtOnce(TypeDescriptor * basetype, int dimension, ...);
-TypeDescriptor * CreatStructureDescriptor(FieldList * fields);
-/*
-    TypeDescriptor * CreatStructureAtOnce(int fieldscnt,...); 
-    Return an structure type descriptor on success, NULL if failed.
-    fieldscnt : number of fields
-    ... : list of field information of each field
-          format: field1_name, field1_type, field2_name, field2_type, ...
-*/
-TypeDescriptor * CreatStructureAtOnce(int fieldscnt,...);
-FieldList * CreatFieldList(char * fieldname, TypeDescriptor * fieldtype, FieldList * next);
+FieldList * CreatField();
+void DestoryFieldList(FieldList * head);
+FieldList * CopyFieldList(FieldList * src);
+
+TypeDescriptor * CreatArrayDescriptor(TypeDescriptor * arraytype, int size, bool copy);
+TypeDescriptor * CreatArrayAtOnce(TypeDescriptor * basetype, int dimension, bool copy, ...);
+TypeDescriptor * CreatStructureDescriptor(FieldList * fields, bool copy);
+TypeDescriptor * CreatStructureAtOnce(int fieldscnt, bool copy, ...);
 
 TypeDescriptor * BasicInt();
 TypeDescriptor * BasicFloat();
