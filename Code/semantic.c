@@ -1,10 +1,11 @@
 #include "semantic.h"
 
-#define SA(RETURN,NAME,...) RETURN SemanticAnalysis##NAME (const struct CST_node* n, SymbolTable * systab,##__VA_ARGS__)
+#define SA(RETURN,NAME,...) RETURN SemanticAnalysis##NAME (const struct CST_node* n, SymbolTable * symtab,##__VA_ARGS__)
 SA(void, Program);
 SA(void, ExtDefList);
 SA(void, ExtDef);
 SA(TypeDescriptor*, Specifier);
+SA(void, DefList);
 
 void SemanticAnalysis(const struct CST_node* root){
     SymbolTable * symtable = CreatSymbolTable();
@@ -18,15 +19,15 @@ void SemanticAnalysis(const struct CST_node* root){
 
 /* Program --> ExtDefList */
 SA(void, Program){
-    OpenScope(systab,"Global_Scope");
-    SemanticAnalysisExtDefList(n->child_list[0],systab);
-    CloseScope(systab);
+    OpenScope(symtab,"Global_Scope");
+    SemanticAnalysisExtDefList(n->child_list[0],symtab);
+    CloseScope(symtab);
 }
 
 SA(void,ExtDefList){
     struct CST_node * curExtDefList = n;
     while(curExtDefList->child_cnt != 0){
-        SemanticAnalysisExtDef(curExtDefList->child_list[0],systab);
+        SemanticAnalysisExtDef(curExtDefList->child_list[0],symtab);
         curExtDefList = curExtDefList->child_list[1];
     }
 }
@@ -68,13 +69,13 @@ SA(TypeDescriptor*, Specifier){
                 case 2 : /* STRUCT Tag */
                     struct CST_node * tag = st->child_list[1];
                     struct CST_id_node * id = (struct CST_id_node *)(tag->child_list[0]);
-                    Symbol*  type = LookUp(systab,id->ID);
+                    Symbol*  type = LookUp(symtab,id->ID);
                     if(!type){
                         ReportSemanticError(0,0,"structure type was not defined");
                         return BasicError();
                     }else{
                         if(type->attribute.IdClass != TYPENAME){
-                            ReportSemanticError(0,0,"name has been used");
+                            ReportSemanticError(0,0,"name conflict");
                             return BasicError();
                         }else{
                             /* WARNING : Copy or Pointer? */
@@ -82,6 +83,17 @@ SA(TypeDescriptor*, Specifier){
                         }
                     }
                 case 5 : /* STRUCT OptTag LC DefList RC */
+                    struct CST_node * opttag = st->child_list[1];
+                    struct CST_ndoe * deflist = st->child_list[3];
+                    Symbol * newtype = NULL;
+                    if(opttag->child_cnt != 0){
+                        char * optid = ((struct CST_id_node *)(opttag->child_list[0]))->ID;
+                        newtype = Insert(symtab,optid);
+                        if(!newtype){
+                            ReportSemanticError(0,0,"name has been used");
+                            return BasicError();
+                        }
+                    }
                 default : /* error */
                     return BasicError();
             }
