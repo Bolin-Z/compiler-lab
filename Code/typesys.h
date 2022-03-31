@@ -42,9 +42,7 @@ void DestoryFieldList(FieldList * head);
 FieldList * CopyFieldList(FieldList * src);
 
 TypeDescriptor * CreatArrayDescriptor(TypeDescriptor * arraytype, int size, bool copy);
-TypeDescriptor * CreatArrayAtOnce(TypeDescriptor * basetype, int dimension, bool copy, ...);
 TypeDescriptor * CreatStructureDescriptor(FieldList * fields, bool copy);
-TypeDescriptor * CreatStructureAtOnce(int fieldscnt, bool copy, ...);
 
 TypeDescriptor * BasicInt();
 TypeDescriptor * BasicFloat();

@@ -54,13 +54,7 @@ void DestoryTypeDescriptor(TypeDescriptor * s){
                 free(s);
                 break;
             case STRUCTURE :
-                FieldList * cur = s->Structure;
-                while(cur != NULL){
-                    FieldList * nxt = cur->NextField;
-                    DestoryTypeDescriptor(cur->FieldType);
-                    free(cur);
-                    cur = nxt;
-                }
+                DestoryFieldList(s->Structure);
                 free(s);
                 break;
             case BASIC : /* Do nothing */
@@ -204,93 +198,6 @@ TypeDescriptor * CreatStructureDescriptor(FieldList * fields, bool copy){
                 st = NULL;
             }
         }
-    }
-    return st;
-}
-
-/* 
-    TypeDescriptor * CreatArrayAtOnce(TypeDescriptor * basetype, int dimension, bool copy, ...);
-    Return an array TypeDescriptor object.
-    basetype:  basic element type of array
-    dimension: number of dimensions (dimension >= 1)
-    copy: if set copy to true, new TypeDescriptor same as basetype will be created
-    ... :      list of sizes of each dimension with type int
-               format: size1, size2, size3, ...
-*/
-TypeDescriptor * CreatArrayAtOnce(TypeDescriptor * basetype, int dimension, bool copy, ...){
-    if(dimension < 1) return NULL;
-    TypeDescriptor * head = NULL;
-    TypeDescriptor * tail = NULL;
-    TypeDescriptor * pre = NULL;
-    bool failed = false;
-    va_list(ap);
-    va_start(ap,copy);
-    for(int i = 1;i <= dimension;i++){
-        TypeDescriptor * cur = CreatTypeDescriptor();
-        if(!cur){
-            failed = true;
-            break;
-        }
-        cur->TypeClass = ARRAY;
-        cur->Array.size = va_arg(ap,int);
-        if(head == NULL) head = cur;
-        if(pre != NULL) pre->Array.elem = cur;
-        pre = cur;
-        if(i == dimension) tail = cur;
-    }
-    va_end(ap);
-    tail->Array.elem = (copy)? CopyTypeDescriptor(basetype) : basetype;
-    if(!tail->Array.elem) failed = true;
-    if(failed){
-        DestoryTypeDescriptor(head);
-        head = NULL;
-    }
-    return head;
-}
-
-/*
-    TypeDescriptor * CreatStructureAtOnce(int fieldscnt,...); 
-    Return an structure type descriptor on success, NULL if failed.
-    fieldscnt : number of fields
-    copy: if set copy to true, FieldType will point to new TypeDescriptor
-    ... : list of field information of each field
-          format: field1_name, field1_type, field2_name, field2_type, ...
-*/
-TypeDescriptor * CreatStructureAtOnce(int fieldscnt, bool copy, ...){
-    TypeDescriptor * st = CreatStructureDescriptor(NULL,false);
-    if(fieldscnt > 0){
-        FieldList * head = NULL;
-        FieldList * pre = NULL;
-        bool failed = false;
-        va_list(ap);
-        va_start(ap,copy);
-        for(int i = 0;i < fieldscnt;i++){
-            FieldList * cur = CreatField();
-            if(!cur){
-                failed = true;
-                break;
-            }
-            char * fn = va_arg(ap,char*);
-            cur->FieldName = fn;
-            TypeDescriptor * ft = va_arg(ap,TypeDescriptor*);
-            cur->FieldType = (copy)? CopyTypeDescriptor(ft) : ft;
-            if(!cur->FieldType){
-                DestoryFieldList(cur);
-                failed = true;
-                break;
-            }
-            if(head == NULL) head = cur;
-            if(pre != NULL) pre->NextField = cur;
-            pre = cur;
-        }
-        va_end(ap);
-        if(failed){
-            DestoryFieldList(head);
-            head = NULL;
-            DestoryTypeDescriptor(st);
-            st = NULL;
-        }
-        st->Structure = head;
     }
     return st;
 }

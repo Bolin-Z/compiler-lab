@@ -5,7 +5,7 @@ SA(void, Program);
 SA(void, ExtDefList);
 SA(void, ExtDef);
 SA(TypeDescriptor*, Specifier);
-SA(void, DefList);
+SA(void, DefList, bool StructureDefList);
 
 void SemanticAnalysis(const struct CST_node* root){
     SymbolTable * symtable = CreatSymbolTable();
@@ -95,10 +95,35 @@ SA(TypeDescriptor*, Specifier){
                 case 5 : /* STRUCT OptTag LC DefList RC */
                     struct CST_node * opttag = st->child_list[1];
                     struct CST_ndoe * deflist = st->child_list[3];
+                    Symbol * newst = NULL;
+                    bool conflict = false;
+                    if(opttag->child_cnt != 0){
+                        /* define a new structure type */
+                        char * stname = ((struct CST_id_node *)(opttag->child_list[0]))->ID;
+                        if(LookUp(symtab,stname,false) != NULL) conflict = true;
+                        newst = Insert(symtab,stname);
+                        newst->attribute.IdClass = TYPENAME;
+                    }
+                    /* Construct a structure TypeDescriptor */
+                    Scope * newscope = OpenScope(symtab,NULL);
+                    TypeDescriptor * newsttype = NULL;
+                    SemanticAnalysisDefList(deflist,symtab,true);
+                    if(newscope->scopebeginidx == newscope->scopeendidx){
+                        /* empty field list */
+                        newsttype = CreatStructureDescriptor(NULL,false);
+                    }else{
+                        
+                    }
+                    CloseScope(symtab);
+                    break;
                 default : /* error */
                     return BasicError();
             }
         default : /* error */
             return BasicError();
     }
+}
+
+SA(void,DefList, bool StructureDefList){
+
 }
