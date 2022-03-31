@@ -52,7 +52,18 @@ SA(void, ExtDef){
     }
 }
 
-/* Creat a TypeDescriptor and return a pointer to it. */
+/*
+    Specifier contains type infomation which use TypeDescriptor to represent.
+    If the TypeDescriptor already exists:
+            1. the basic type
+            2. a structure type that was defined before
+        return a pointer to that TypeDescriptor.
+    Else if the Specifier defined:
+            1. a structure type
+            2. a anonymous structure type
+        creat a new TypeDescriptor and return a pointer to it.
+    Else return Error type to indicate an unexpected error.
+*/
 SA(TypeDescriptor*, Specifier){
     switch(get_symtype(n->child_list[0]->compact_type)){
         case SYM(TYPE) : 
@@ -69,32 +80,21 @@ SA(TypeDescriptor*, Specifier){
                 case 2 : /* STRUCT Tag */
                     struct CST_node * tag = st->child_list[1];
                     struct CST_id_node * id = (struct CST_id_node *)(tag->child_list[0]);
-                    Symbol*  type = LookUp(symtab,id->ID);
+                    Symbol*  type = LookUp(symtab,id->ID,false);
                     if(!type){
                         ReportSemanticError(0,0,"structure type was not defined");
                         return BasicError();
                     }else{
                         if(type->attribute.IdClass != TYPENAME){
-                            ReportSemanticError(0,0,"name conflict");
+                            ReportSemanticError(0,0,"Not a structure type name");
                             return BasicError();
                         }else{
-                            /* WARNING : Copy or Pointer? */
-                            /* Pointer. Stack ? */
                             return type->attribute.IdType;
                         }
                     }
                 case 5 : /* STRUCT OptTag LC DefList RC */
                     struct CST_node * opttag = st->child_list[1];
                     struct CST_ndoe * deflist = st->child_list[3];
-                    Symbol * newtype = NULL;
-                    if(opttag->child_cnt != 0){
-                        char * optid = ((struct CST_id_node *)(opttag->child_list[0]))->ID;
-                        newtype = Insert(symtab,optid);
-                        if(!newtype){
-                            ReportSemanticError(0,0,"name has been used");
-                            return BasicError();
-                        }
-                    }
                 default : /* error */
                     return BasicError();
             }

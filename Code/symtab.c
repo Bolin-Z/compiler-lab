@@ -44,18 +44,21 @@ void DestorySymbol(Symbol* t){
     t->id = NULL;
     t->pre = t->nxt = DUMMYIDX;
     switch(t->attribute.IdClass){
+        case TYPENAME :
+            DestoryTypeDescriptor(t->attribute.IdType); break;
         case FUNCTION :
-            for(int i = 0;i < t->attribute.Info.Func.Argc;i++)
-                DestoryTypeDescriptor(t->attribute.Info.Func.ArgTypeList[i]);
             free(t->attribute.Info.Func.ArgTypeList);
+            t->attribute.Info.Func.ArgTypeList = NULL;
             t->attribute.Info.Func.Argc = 0;
             t->attribute.Info.Func.defined = false;
             break;
+        case VARIABLE : /* points to an existing type */
+        case NONE :
         default : /* Do nothing */ 
             break;
     }
     t->attribute.IdClass = NONE;
-    DestoryTypeDescriptor(t->attribute.IdType);
+    t->attribute.IdType = NULL;
 }
 
 void DestoryScope(Scope* t){
