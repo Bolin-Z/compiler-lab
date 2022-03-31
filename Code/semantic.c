@@ -5,7 +5,9 @@ SA(void, Program);
 SA(void, ExtDefList);
 SA(void, ExtDef);
 SA(TypeDescriptor*, Specifier);
-SA(void, DefList, bool StructureDefList);
+SA(void, DefList, bool fields);
+SA(void, Def, bool field);
+SA(TypeDescriptor*, Exp);
 
 void SemanticAnalysis(const struct CST_node* root){
     SymbolTable * symtable = CreatSymbolTable();
@@ -53,16 +55,7 @@ SA(void, ExtDef){
 }
 
 /*
-    Specifier contains type infomation which use TypeDescriptor to represent.
-    If the TypeDescriptor already exists:
-            1. the basic type
-            2. a structure type that was defined before
-        return a pointer to that TypeDescriptor.
-    Else if the Specifier defined:
-            1. a structure type
-            2. a anonymous structure type
-        creat a new TypeDescriptor and return a pointer to it.
-    Else return Error type to indicate an unexpected error.
+    Creat a TypeDescriptor and return a pointer to it.
 */
 SA(TypeDescriptor*, Specifier){
     switch(get_symtype(n->child_list[0]->compact_type)){
@@ -89,32 +82,48 @@ SA(TypeDescriptor*, Specifier){
                             ReportSemanticError(0,0,"Not a structure type name");
                             return BasicError();
                         }else{
-                            return type->attribute.IdType;
+                            return CopyTypeDescriptor(type->attribute.IdType);
                         }
                     }
                 case 5 : /* STRUCT OptTag LC DefList RC */
                     struct CST_node * opttag = st->child_list[1];
                     struct CST_ndoe * deflist = st->child_list[3];
                     Symbol * newst = NULL;
-                    bool conflict = false;
                     if(opttag->child_cnt != 0){
                         /* define a new structure type */
                         char * stname = ((struct CST_id_node *)(opttag->child_list[0]))->ID;
-                        if(LookUp(symtab,stname,false) != NULL) conflict = true;
+                        /* structure name is defined globally */
+                        if(LookUp(symtab,stname,false) != NULL)
+                            ReportSemanticError(0,0,"Structure name is conflict with existing name");
                         newst = Insert(symtab,stname);
                         newst->attribute.IdClass = TYPENAME;
                     }
                     /* Construct a structure TypeDescriptor */
+                    /* Type name is in the outer-scope */
                     Scope * newscope = OpenScope(symtab,NULL);
-                    TypeDescriptor * newsttype = NULL;
                     SemanticAnalysisDefList(deflist,symtab,true);
-                    if(newscope->scopebeginidx == newscope->scopeendidx){
-                        /* empty field list */
-                        newsttype = CreatStructureDescriptor(NULL,false);
-                    }else{
-                        
+                    /* Construct FieldList */
+                    FieldList * head = NULL;
+                    FieldList * pre = NULL;
+                    for(int i = newscope->scopebeginidx;i < newscope->scopeendidx;i++){
+                        Symbol * tempsym = Access(symtab,i);
+                        switch(tempsym->attribute.IdClass){
+                            case VARIABLE : /* field */
+                                FieldList * f = CreatField();
+                                f->FieldName = tempsym->id;
+                                f->FieldType = CopyTypeDescriptor(tempsym->attribute.IdType);
+                                if(!head) head = f;
+                                if(!pre) pre->NextField = f;
+                                pre = f;
+                                break;
+                            default : /* ignore TYPENAME */ 
+                                break;
+                        }
                     }
                     CloseScope(symtab);
+                    TypeDescriptor * newsttype = CreatStructureDescriptor(head,false);
+                    if(newst) newst->attribute.IdType = newsttype;
+                    return newsttype;
                     break;
                 default : /* error */
                     return BasicError();
@@ -124,6 +133,54 @@ SA(TypeDescriptor*, Specifier){
     }
 }
 
-SA(void,DefList, bool StructureDefList){
+SA(void, DefList, bool fields){
+    struct CST_node * curDefList = n;
+    while(curDefList->child_cnt != 0){
+        SemanticAnalysisDef(n->child_list[0],symtab, fields);
+        curDefList = curDefList->child_list[1];
+    }
+}
+
+/* Def --> Specifier DecList SEMI */
+SA(void, Def, bool field){
+    TypeDescriptor * basetype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
+    struct CST_node * curDecList = n->child_list[1];
+    while(1){
+        struct CST_node * curDec = curDecList->child_list[0];
+        /* Semantic Analysis VarDec */
+        struct CST_node * curVarDec = curDec->child_list[0];
+        TypeDescriptor * pretype = basetype;
+        while(curVarDec->child_cnt != 1){
+            int arsize = ((struct CST_int_node *)(curVarDec->child_list[2]))->intval;
+            pretype = CreatArrayDescriptor(pretype,arsize,false);
+            curVarDec = curVarDec->child_list[0];
+        }
+        char * varname = ((struct CST_id_node *)(curVarDec->child_list[0]))->ID;
+        if(LookUp(symtab,varname,true) != NULL){
+            if(field) ReportSemanticError(0,0,"Field name conflict");
+            else ReportSemanticError(0,0,"Variable name conflict");
+        }
+        Symbol * newsymboal = Insert(symtab,varname);
+        newsymboal->attribute.IdClass = VARIABLE;
+        newsymboal->attribute.IdType = pretype;
+        if(curDec->child_cnt == 3){
+            /* VarDec ASSIGNOP Exp */
+            TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab);
+            if(field) ReportSemanticError(0,0,"Field can not be initialized");
+            else{
+                if(!IsEqualType(newsymboal->attribute.IdType,exptype))
+                    ReportSemanticError(0,0,"Unmatch Exp type");
+            }
+        }
+        if(curDecList->child_cnt == 1) break;
+        else curDecList = curDecList->child_list[2];
+    }
+}
+
+/* 
+    Return a pointer to a TypeDescriptor that describes Exp.
+     No new TypeDescriptor will be created.
+*/
+SA(TypeDescriptor*, Exp){
 
 }
