@@ -104,45 +104,42 @@ Scope * CurScope(SymbolTable* s){
     return AccessScopeStack(s->scopstack,TopIdxOfScopeStack(s->scopstack));
 }
 
-Symbol * LookUp(SymbolTable* s, char* name){
+/* Look Up 'name' in Symbol table s, curscope indicates that whether to search in current scope. */
+Symbol * LookUp(SymbolTable* s, char* name, bool curscope){
     int hashval = (int)hash_pjw(name);
     int checkidx = s->symhtable.hashlist[hashval];
-    while(checkidx != DUMMYIDX){
+    Scope * cur = CurScope(s);
+    while((checkidx != DUMMYIDX) && ((curscope && (checkidx >= cur->scopebeginidx)) || (!curscope))){
         Symbol* check = AccessSymbolStack(s->symstack,checkidx);
         if(0 == strcmp(check->id,name)) break;
         checkidx = check->nxt;
     }
-    return (checkidx == DUMMYIDX) ? (NULL) : (AccessSymbolStack(s->symstack,checkidx));
+    if(!curscope){
+        /* Look up all scope */
+        return (checkidx == DUMMYIDX) ? (NULL) : AccessSymbolStack(s->symstack, checkidx);
+    }else{
+        /* Look up in current scope */
+        return (checkidx >= cur->scopebeginidx) ? AccessSymbolStack(s->symstack, checkidx) : (NULL);
+    }
 }
 
-
+/* Register symbol with name as key and return a pointer to it. */
 Symbol * Insert(SymbolTable* s, char* name){
     int hashval = (int)hash_pjw(name);
-    Scope * cur = CurScope(s);
-    int checkidx = s->symhtable.hashlist[hashval];
-    bool conflict = false;
-    while((checkidx != DUMMYIDX)&&(checkidx >= cur->scopebeginidx)){
-        Symbol* check = AccessSymbolStack(s->symstack,checkidx);
-        if(0 == strcmp(check->id,name)){
-            conflict = true;
-            break;
-        }
-        checkidx = check->nxt;
-    }
-    if(conflict) return NULL;
     Symbol * newsymbol = PushSymbolStack(s->symstack);
-    int curidx = TopIdxOfSymbolStack(s->symstack);
-    newsymbol->pre = hashval - HASHTABLESIZE;
-    if(s->symhtable.hashlist[hashval] == DUMMYIDX){
-        newsymbol->nxt = DUMMYIDX;
-    }else{
-        int nxtidx = s->symhtable.hashlist[hashval];
-        Symbol * nxtsymbol = AccessSymbolStack(s->symstack,nxtidx);
-        nxtsymbol->pre = curidx;
-        newsymbol->nxt = nxtidx;
+    if(newsymbol){
+        newsymbol->id = name;
+        int curidx = TopIdxOfSymbolStack(s->symstack);
+        newsymbol->pre = hashval - HASHTABLESIZE;
+        newsymbol->nxt = s->symhtable.hashlist[hashval];
+        if(newsymbol->nxt != DUMMYIDX){
+            Symbol * brother = AccessSymbolStack(s->symstack,newsymbol->nxt);
+            brother->pre = curidx;
+        }
+        s->symhtable.hashlist[hashval] = curidx;
+        Scope * cur = CurScope(s);
+        cur->scopeendidx += 1;
     }
-    s->symhtable.hashlist[hashval] = curidx;
-    cur->scopeendidx += 1;
     return newsymbol;
 }
 

@@ -79,6 +79,7 @@ SA(TypeDescriptor*, Specifier){
                             return BasicError();
                         }else{
                             /* WARNING : Copy or Pointer? */
+                            /* Pointer. Stack ? */
                             return type->attribute.IdType;
                         }
                     }
