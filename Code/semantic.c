@@ -301,9 +301,9 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     return BasicError();
                 }else{
                     TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[1],symtab,false);
-                    if(IsEqualType(exp,BasicInt()) || IsEqualType(exp,BasicFloat()))
+                    if(IsEqualType(exp,BasicInt()) || IsEqualType(exp,BasicFloat()) || IsEqualType(exp,BasicError())){
                         return exp;
-                    else{
+                    }else{
                         ReportSemanticError(0,0,"Only int and float types can do arithmetic operation");
                         return BasicError();
                     }
@@ -313,7 +313,84 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
             {
                 if(LeftHand){
                     ReportSemanticError(0,0,"The left-hand side of assignment must be left value");
+                    return BasicError();
+                }else{
+                    TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[1],symtab,false);
+                    if(IsEqualType(exp,BasicInt()) || IsEqualType(exp,BasicError())){
+                        return exp;
+                    }else{
+                        ReportSemanticError(0,0,"Only int types can do logical operation");
+                        return BasicError();
+                    }
                 }
+            }
+        case 12 : /* ID LP Args RP */
+            {
+                if(LeftHand){
+                    ReportSemanticError(0,0,"The left-hand side of assignment must be left value");
+                    return BasicError();
+                }else{
+                    char * funid = ((struct CST_id_node *)(n->child_list[0]))->ID;
+                    Symbol * fun = LookUp(symtab,funid,false);
+                    if(fun == NULL){
+                        ReportSemanticError(2,0,"Function was used before it was defined");
+                        return BasicError();
+                    }else if(fun->attribute.IdClass != FUNCTION){
+                        ReportSemanticError(11,0,"Use () operator on non-function id");
+                        return BasicError();
+                    }else{
+                        struct CST_node * curArg = n->child_list[2];
+                        int expectargnum = fun->attribute.Info.Func.Argc;
+                        for(int i = 0;i < expectargnum;i++){
+                            struct CST_node * curExp = curArg->child_list[0];
+                            TypeDescriptor * curExptype = SemanticAnalysisExp(curExp,symtab,false);
+                            TypeDescriptor * expecttype = fun->attribute.Info.Func.ArgTypeList[i];
+                            if(IsEqualType(curExp,BasicError())){
+                                return BasicError();
+                            }
+                            if(!IsEqualType(expecttype,curExptype)){
+                                ReportSemanticError(9,0,"Argument type unmatched");
+                                return BasicError();
+                            }
+                            bool lastexparg = (i == expectargnum - 1);
+                            bool lastrealarg = (curArg->child_cnt == 1);
+                            if((lastexparg && (!lastrealarg)) || ((!lastexparg) && lastrealarg)){
+                                ReportSemanticError(9,0,"Argument number unmatched");
+                                return BasicError();
+                            }
+                            curArg = curArg->child_list[2];
+                        }
+                        return fun->attribute.IdType;
+                    }
+                }
+            }
+        case 13 : /* ID LP RP */
+            {
+                if(LeftHand){
+                    ReportSemanticError(0,0,"The left-hand side of assignment must be left value");
+                    return BasicError();
+                }else{
+                    char * funid = ((struct CST_id_node *)(n->child_list[0]))->ID;
+                    Symbol * fun = LookUp(symtab,funid,false);
+                    if(fun == NULL){
+                        ReportSemanticError(2,0,"Function was used before it was defined");
+                        return BasicError();
+                    }else if(fun->attribute.IdClass != FUNCTION){
+                        ReportSemanticError(11,0,"Use () operator on non-function id");
+                        return BasicError();
+                    }else{
+                        if(fun->attribute.Info.Func.Argc != 0){
+                            ReportSemanticError(9,0,"Argument number unmatched");
+                            return BasicError();
+                        }else{
+                            return fun->attribute.IdType;
+                        }
+                    }
+                }
+            }
+        case 14 : /* Exp LB Exp RB */
+            {
+                
             }
         default : /* error */
             return BasicError();
