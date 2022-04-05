@@ -390,7 +390,79 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
             }
         case 14 : /* Exp LB Exp RB */
             {
-                
+                /* WARING: LeftHand ? */
+                TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,LeftHand);
+                TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,false);
+                bool rterror = false;
+                if(IsEqualType(lexp,BasicError())){
+                    rterror = true;
+                }else{
+                    if(lexp->TypeClass != ARRAY){
+                        ReportSemanticError(10,0,"Use [] operator on non-array type variable");
+                        rterror = true;
+                    }
+                }
+                if(IsEqualType(rexp,BasicError())){
+                    rterror = true;
+                }else{
+                    if(!IsEqualType(rexp,BasicInt())){
+                        ReportSemanticError(12,0,"Expect int value inside []");
+                        rterror = true;
+                    }
+                }
+                return (rterror) ? BasicError() : lexp->Array.elem;
+            }
+        case 15 : /* Exp DOT ID */
+            {
+                TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[0],symtab,LeftHand);
+                if(IsEqualType(exp,BasicError())){
+                    return BasicError();
+                }else{
+                    if(exp->TypeClass != STRUCTURE){
+                        ReportSemanticError(13,0,"Use . operator on non-structure type variable");
+                        return BasicError();
+                    }else{
+                        FieldList * curField = exp->Structure;
+                        char * fieldid = ((struct CST_id_node *)(n->child_list[2]))->ID;
+                        while(curField != NULL){
+                            if(strcmp(fieldid,curField->FieldName) == 0){
+                                return curField->FieldType;
+                            }
+                            curField = curField->NextField;
+                        }
+                        ReportSemanticError(14,0,"Field 'fieldid' was not defined");
+                        return BasicError();
+                    }
+                }         
+            }
+        case 16 : /* ID */
+            {
+                char * idname = ((struct CST_id_node*)(n->child_list[0]))->ID;
+                Symbol * id = LookUp(symtab,idname,false);
+                if(id == NULL){
+                    ReportSemanticError(1,0,"Use undefined variable");
+                    return BasicError();
+                }else{
+                    return id->attribute.IdType;
+                }
+            }
+        case 17 : /* INT */
+            {
+                if(LeftHand){
+                    ReportSemanticError(0,0,"The left-hand side of assignment must be left value");
+                    return BasicError();
+                }else{
+                    return BasicInt();
+                }
+            }
+        case 18 : /* FLOAT */
+            {
+                if(LeftHand){
+                    ReportSemanticError(0,0,"The left-hand side of assignment must be left value");
+                    return BasicError();
+                }else{
+                    return BasicFloat();
+                }
             }
         default : /* error */
             return BasicError();
