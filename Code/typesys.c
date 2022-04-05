@@ -225,3 +225,7 @@ bool IsEqualType(TypeDescriptor * a,TypeDescriptor * b){
     }
     return false;
 }
+
+bool IsErrorType(TypeDescriptor * a){
+    return a->TypeClass == ERROR;
+}

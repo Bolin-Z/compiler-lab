@@ -9,6 +9,7 @@ SA(void, DefList, bool fields);
 SA(void, Def, bool field);
 SA(TypeDescriptor*, Exp, bool LeftHand);
 
+/* wrap-up function of semantic analysis stage */
 void SemanticAnalysis(const struct CST_node* root){
     SymbolTable * symtable = CreatSymbolTable();
     CreatTypeSystem();
@@ -46,6 +47,31 @@ SA(void, ExtDef){
     }
     switch(Production){
         case 1 : /* Specifier ExtDecList SEMI */
+            {
+                /* basetype == BasicError() is acceptable, however BasicTypeError will be assigned to IDs. */
+                TypeDescriptor * basetype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
+                struct CST_node * curExtDecList = n->child_list[1];
+                while(1){
+                    struct CST_node * curVarDec = curExtDecList->child_list[0];
+                    TypeDescriptor * pretype = basetype;
+                    if(!IsErrorType(pretype)){
+                        while(curVarDec->child_cnt != 1){
+                            int arsize = ((struct CST_int_node *)(curVarDec->child_list[2]))->intval;
+                            pretype = CreatArrayDescriptor(pretype,arsize,false);
+                            curVarDec = curVarDec->child_list[0];
+                        }
+                    }
+                    char * varname = ((struct CST_id_node*)(curVarDec->child_list[0]))->ID;
+                    if(LookUp(symtab,varname,true) != NULL){
+                        ReportSemanticError(0,0,"Variable name conflict");
+                    }
+                    Symbol * newsymbol = Insert(symtab,varname);
+                    newsymbol->attribute.IdClass = VARIABLE;
+                    newsymbol->attribute.IdType = pretype;
+                    if(curExtDecList->child_cnt == 1) break;
+                    else curExtDecList = curExtDecList->child_list[2];
+                }
+            }
         case 2 : /* Specifier SEMI */
         case 3 : /* Specifier FunDec CompSt */
         case 4 : /* Specifier FunDec SEMI */
@@ -143,6 +169,7 @@ SA(void, DefList, bool fields){
 
 /* Def --> Specifier DecList SEMI */
 SA(void, Def, bool field){
+    /* basetype == BasicError() is acceptable, however BasicTypeError will be assigned to IDs. */
     TypeDescriptor * basetype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
     struct CST_node * curDecList = n->child_list[1];
     while(1){
@@ -150,10 +177,12 @@ SA(void, Def, bool field){
         /* Semantic Analysis VarDec */
         struct CST_node * curVarDec = curDec->child_list[0];
         TypeDescriptor * pretype = basetype;
-        while(curVarDec->child_cnt != 1){
-            int arsize = ((struct CST_int_node *)(curVarDec->child_list[2]))->intval;
-            pretype = CreatArrayDescriptor(pretype,arsize,false);
-            curVarDec = curVarDec->child_list[0];
+        if(!IsErrorType(pretype)){
+            while(curVarDec->child_cnt != 1){
+                int arsize = ((struct CST_int_node *)(curVarDec->child_list[2]))->intval;
+                pretype = CreatArrayDescriptor(pretype,arsize,false);
+                curVarDec = curVarDec->child_list[0];
+            }
         }
         char * varname = ((struct CST_id_node *)(curVarDec->child_list[0]))->ID;
         if(LookUp(symtab,varname,true) != NULL){
@@ -168,7 +197,7 @@ SA(void, Def, bool field){
             TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab,false);
             if(field) ReportSemanticError(0,0,"Field can not be initialized");
             else{
-                if(!IsEqualType(newsymboal->attribute.IdType,exptype))
+                if((!IsErrorType(exptype)) && (!IsEqualType(newsymboal->attribute.IdType,exptype)))
                     ReportSemanticError(0,0,"Type mismatched for assignment");
             }
         }
@@ -229,7 +258,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
             {
                 TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0], symtab, true);
                 TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2], symtab, LeftHand);
-                if(IsEqualType(lexp,BasicError()) || IsEqualType(rexp,BasicError())){
+                if(IsErrorType(lexp) || IsErrorType(rexp)){
                     /* lexp or rexp contains error */
                     return BasicError();
                 }else{
@@ -250,7 +279,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                 }else{
                     TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,false);
                     TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,false);
-                    if(IsEqualType(lexp,BasicError()) || IsEqualType(rexp,BasicError())){
+                    if(IsErrorType(lexp) || IsErrorType(rexp)){
                         /* lexp or rexp contains error */
                         return BasicError();
                     }else{
@@ -274,7 +303,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                 }else{
                     TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,false);
                     TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,false);
-                    if(IsEqualType(lexp,BasicError()) || IsEqualType(rexp,BasicError())){
+                    if(IsErrorType(lexp) || IsErrorType(rexp)){
                         return BasicError();
                     }else{
                         if(IsEqualType(lexp,rexp)){
@@ -301,7 +330,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     return BasicError();
                 }else{
                     TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[1],symtab,false);
-                    if(IsEqualType(exp,BasicInt()) || IsEqualType(exp,BasicFloat()) || IsEqualType(exp,BasicError())){
+                    if(IsEqualType(exp,BasicInt()) || IsEqualType(exp,BasicFloat()) || IsErrorType(exp)){
                         return exp;
                     }else{
                         ReportSemanticError(0,0,"Only int and float types can do arithmetic operation");
@@ -316,7 +345,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     return BasicError();
                 }else{
                     TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[1],symtab,false);
-                    if(IsEqualType(exp,BasicInt()) || IsEqualType(exp,BasicError())){
+                    if(IsEqualType(exp,BasicInt()) || IsErrorType(exp)){
                         return exp;
                     }else{
                         ReportSemanticError(0,0,"Only int types can do logical operation");
@@ -345,7 +374,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                             struct CST_node * curExp = curArg->child_list[0];
                             TypeDescriptor * curExptype = SemanticAnalysisExp(curExp,symtab,false);
                             TypeDescriptor * expecttype = fun->attribute.Info.Func.ArgTypeList[i];
-                            if(IsEqualType(curExp,BasicError())){
+                            if(IsErrorType(curExp)){
                                 return BasicError();
                             }
                             if(!IsEqualType(expecttype,curExptype)){
@@ -394,7 +423,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                 TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,LeftHand);
                 TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,false);
                 bool rterror = false;
-                if(IsEqualType(lexp,BasicError())){
+                if(IsErrorType(lexp)){
                     rterror = true;
                 }else{
                     if(lexp->TypeClass != ARRAY){
@@ -402,7 +431,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                         rterror = true;
                     }
                 }
-                if(IsEqualType(rexp,BasicError())){
+                if(IsErrorType(rexp)){
                     rterror = true;
                 }else{
                     if(!IsEqualType(rexp,BasicInt())){
@@ -415,7 +444,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
         case 15 : /* Exp DOT ID */
             {
                 TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[0],symtab,LeftHand);
-                if(IsEqualType(exp,BasicError())){
+                if(IsErrorType(exp)){
                     return BasicError();
                 }else{
                     if(exp->TypeClass != STRUCTURE){

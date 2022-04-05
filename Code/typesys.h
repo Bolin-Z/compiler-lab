@@ -49,5 +49,6 @@ TypeDescriptor * BasicFloat();
 TypeDescriptor * BasicError();
 
 bool IsEqualType(TypeDescriptor * a,TypeDescriptor * b);
+bool IsErrorType(TypeDescriptor * a);
 
 #endif  
