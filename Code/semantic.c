@@ -15,13 +15,13 @@ SA(void, Stmt, TypeDescriptor * returntype); // Working ON
 
 /* wrap-up function of semantic analysis stage */
 void SemanticAnalysis(const struct CST_node* root){
-    SymbolTable * symtable = CreatSymbolTable();
     CreatTypeSystem();
+    SymbolTable * symtable = CreatSymbolTable();
 
     SemanticAnalysisProgram(root,symtable);
 
-    DestoryTypeSystem();
     DestorySymbolTable(symtable);
+    DestoryTypeSystem();
 }
 
 /* Program --> ExtDefList */

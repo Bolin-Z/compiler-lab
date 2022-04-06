@@ -1,6 +1,6 @@
 %{
     #include "lex.yy.c"
-    #include "decls.h"
+    #include "error.h"
     #include "defs.h"
     #include "cst.h"
 

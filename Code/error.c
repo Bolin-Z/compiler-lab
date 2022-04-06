@@ -1,4 +1,4 @@
-#include"decls.h"
+#include"error.h"
 
 bool has_error;
 

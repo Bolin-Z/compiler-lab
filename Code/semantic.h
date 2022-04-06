@@ -6,6 +6,7 @@
 #include "cst.h"
 #include "symtab.h"
 #include "typesys.h"
+#include "error.h"
 
 void SemanticAnalysis(const struct CST_node* root);
 

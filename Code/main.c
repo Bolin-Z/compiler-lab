@@ -2,6 +2,7 @@
 #include<stdlib.h>
 #include "syntax.tab.h"
 #include"decls.h"
+#include"error.h"
 #include"cst.h"
 
 extern void yyrestart(FILE*);
