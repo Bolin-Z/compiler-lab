@@ -7,7 +7,11 @@ SA(void, ExtDef);
 SA(TypeDescriptor*, Specifier);
 SA(void, DefList, bool fields);
 SA(void, Def, bool field);
+SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field, bool curscope);
+SA(Symbol*, FunDec, TypeDescriptor * returntype, bool declaration);
 SA(TypeDescriptor*, Exp, bool LeftHand);
+SA(void, StmtList, TypeDescriptor * returntype); // TODO
+SA(void, Stmt, TypeDescriptor * returntype);  // TODO
 
 /* wrap-up function of semantic analysis stage */
 void SemanticAnalysis(const struct CST_node* root){
@@ -51,30 +55,34 @@ SA(void, ExtDef){
                 /* basetype == BasicError() is acceptable, however BasicTypeError will be assigned to IDs. */
                 TypeDescriptor * basetype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
                 struct CST_node * curExtDecList = n->child_list[1];
-                while(1){
-                    struct CST_node * curVarDec = curExtDecList->child_list[0];
-                    TypeDescriptor * pretype = basetype;
-                    if(!IsErrorType(pretype)){
-                        while(curVarDec->child_cnt != 1){
-                            int arsize = ((struct CST_int_node *)(curVarDec->child_list[2]))->intval;
-                            pretype = CreatArrayDescriptor(pretype,arsize,false);
-                            curVarDec = curVarDec->child_list[0];
-                        }
-                    }
-                    char * varname = ((struct CST_id_node*)(curVarDec->child_list[0]))->ID;
-                    if(LookUp(symtab,varname,true) != NULL){
-                        ReportSemanticError(0,0,"Variable name conflict");
-                    }
-                    Symbol * newsymbol = Insert(symtab,varname);
-                    newsymbol->attribute.IdClass = VARIABLE;
-                    newsymbol->attribute.IdType = pretype;
+                while(true){
+                    SemanticAnalysisVarDec(curExtDecList->child_list[0],symtab,basetype,false,true);
                     if(curExtDecList->child_cnt == 1) break;
                     else curExtDecList = curExtDecList->child_list[2];
                 }
+                break;
             }
         case 2 : /* Specifier SEMI */
+            {
+                SemanticAnalysisSpecifier(n->child_list[0],symtab);
+                break;
+            }
         case 3 : /* Specifier FunDec CompSt */
+            {
+                TypeDescriptor * rttype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
+                Symbol * newfun = SemanticAnalysisFunDec(n->child_list[1],symtab,rttype,false);
+                /* Semantic Analysis CompSt */
+                SemanticAnalysisDefList(n->child_list[2]->child_list[1], symtab, false);
+                SemanticAnalysisStmtList(n->child_list[2]->child_list[2], symtab, newfun->attribute.IdType);
+                CloseScope(symtab);
+                break;
+            }
         case 4 : /* Specifier FunDec SEMI */
+            {
+                TypeDescriptor * rttype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
+                SemanticAnalysisFunDec(n->child_list[1],symtab,rttype,true);
+                break;
+            }
         default : /* error */
             break;
     }
@@ -172,38 +180,115 @@ SA(void, Def, bool field){
     /* basetype == BasicError() is acceptable, however BasicTypeError will be assigned to IDs. */
     TypeDescriptor * basetype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
     struct CST_node * curDecList = n->child_list[1];
-    while(1){
+    while(true){
         struct CST_node * curDec = curDecList->child_list[0];
-        /* Semantic Analysis VarDec */
-        struct CST_node * curVarDec = curDec->child_list[0];
-        TypeDescriptor * pretype = basetype;
-        if(!IsErrorType(pretype)){
-            while(curVarDec->child_cnt != 1){
-                int arsize = ((struct CST_int_node *)(curVarDec->child_list[2]))->intval;
-                pretype = CreatArrayDescriptor(pretype,arsize,false);
-                curVarDec = curVarDec->child_list[0];
-            }
-        }
-        char * varname = ((struct CST_id_node *)(curVarDec->child_list[0]))->ID;
-        if(LookUp(symtab,varname,true) != NULL){
-            if(field) ReportSemanticError(0,0,"Field name conflict");
-            else ReportSemanticError(0,0,"Variable name conflict");
-        }
-        Symbol * newsymboal = Insert(symtab,varname);
-        newsymboal->attribute.IdClass = VARIABLE;
-        newsymboal->attribute.IdType = pretype;
+        Symbol * newsymbol = SemanticAnalysisVarDec(curDec->child_list[0],symtab,basetype,field,true);
         if(curDec->child_cnt == 3){
             /* VarDec ASSIGNOP Exp */
             TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab,false);
             if(field) ReportSemanticError(0,0,"Field can not be initialized");
             else{
-                if((!IsErrorType(exptype)) && (!IsEqualType(newsymboal->attribute.IdType,exptype)))
+                if((!IsErrorType(exptype)) && (!IsErrorType(newsymbol->attribute.IdType)) && (!IsEqualType(newsymbol->attribute.IdType,exptype)))
                     ReportSemanticError(0,0,"Type mismatched for assignment");
             }
         }
         if(curDecList->child_cnt == 1) break;
         else curDecList = curDecList->child_list[2];
     }
+}
+
+SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field, bool curscope){
+    struct CST_node * curVarDec = n;
+    TypeDescriptor * pretype = basetype;
+    while(curVarDec->child_cnt != 1){
+        if(!IsErrorType(pretype)){
+            int arsize = ((struct CST_int_node *)(curVarDec->child_list[2]))->intval;
+            pretype = CreatArrayDescriptor(pretype,arsize,false);
+        }
+        curVarDec = curVarDec->child_list[0];
+    }
+    char * varname = ((struct CST_id_node*)(curVarDec->child_list[0]))->ID;
+    if(LookUp(symtab,varname,curscope) != NULL){
+        if(field){
+            ReportSemanticError(0,0,"Field name conflict");
+        }else{
+            ReportSemanticError(0,0,"Variable name conflict");
+        }
+    }
+    Symbol * newsymbol = Insert(symtab,varname);
+    newsymbol->attribute.IdClass = VARIABLE;
+    newsymbol->attribute.IdType = pretype;
+    return newsymbol;
+}
+
+SA(Symbol*, FunDec, TypeDescriptor * returntype, bool declaration){
+    /* FunDec := ID LP RP | ID LP VarList RP  */
+    char * funid = ((struct CST_id_node*)(n->child_list[0]))->ID;
+    Symbol * newfun = NULL;
+    Symbol * oldfun = LookUp(symtab,funid,false);
+    if((oldfun != NULL) && (oldfun->attribute.IdClass != FUNCTION)){
+        ReportSemanticError(0,0,"Function name conflicts with variable or structure name");
+        oldfun = NULL;
+    }
+
+    if(oldfun != NULL){
+        if(oldfun->attribute.Info.Func.defined && (!declaration)){
+            ReportSemanticError(4,0,"Redefined of function");
+        }else{
+            if(!IsEqualType(returntype,oldfun->attribute.IdType))
+                ReportSemanticError(19,0,"Function declaration/definition conflict: return type");
+        }
+    }
+    /* always insert */
+    newfun = Insert(symtab,funid);
+    newfun->attribute.IdClass = FUNCTION;
+    newfun->attribute.IdType = returntype;
+    newfun->attribute.Info.Func.defined = UpdateFunctionState(0,funid,declaration);
+
+    Scope * funscope = OpenScope(symtab,newfun->id);
+
+    int newArgc = 0;
+    TypeDescriptor ** newArgTypeList = NULL;
+    if(n->child_cnt == 4){
+        struct CST_node * curVarList = n->child_list[2];
+        while(true){
+            struct CST_node * curParamDec = curVarList->child_list[0];
+            struct CST_node * curSpecifier = curParamDec->child_list[0];
+            struct CST_node * curVarDec = curParamDec->child_list[1];
+            TypeDescriptor * basetype = SemanticAnalysisSpecifier(curSpecifier,symtab);
+            SemanticAnalysisVarDec(curVarDec,symtab,basetype,false,true);
+            newArgc += 1;
+            if(curVarList->child_cnt == 1) break;
+            else curVarList = curVarList->child_list[2];
+        }
+    }
+    newArgTypeList = (newArgc == 0) ? NULL : (TypeDescriptor**)malloc(newArgc*sizeof(TypeDescriptor*));
+    for(int idx = funscope->scopebeginidx, i = 0;idx < funscope->scopeendidx;idx++){
+        Symbol * cursymbol = Access(symtab,idx);
+        if(cursymbol->attribute.IdClass == VARIABLE){
+            newArgTypeList[i] = CopyTypeDescriptor(cursymbol->attribute.IdType);
+            i++;
+        }
+    }
+
+    if(oldfun != NULL){
+        if(oldfun->attribute.Info.Func.Argc != newArgc){
+            ReportSemanticError(19,0,"Function definition/declaration conflict: arguments number");
+        }else{
+            for(int i = 0;i < newArgc;i++){
+                if(!IsEqualType(newArgTypeList[i],oldfun->attribute.Info.Func.ArgTypeList[i])){
+                    ReportSemanticError(19,0,"Function definition/declaration conflict: argument type");
+                    break;
+                }
+            }
+        }
+    }
+
+    newfun->attribute.Info.Func.Argc = newArgc;
+    newfun->attribute.Info.Func.ArgTypeList = newArgTypeList;
+
+    if(declaration) CloseScope(symtab);
+    return newfun;
 }
 
 /* 
@@ -472,7 +557,12 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     ReportSemanticError(1,0,"Use undefined variable");
                     return BasicError();
                 }else{
-                    return id->attribute.IdType;
+                    if(id->attribute.IdClass != VARIABLE){
+                        ReportSemanticError(0,0,"Id is not a variable");
+                        return BasicError();
+                    }else{
+                        return id->attribute.IdType;
+                    }
                 }
             }
         case 17 : /* INT */
