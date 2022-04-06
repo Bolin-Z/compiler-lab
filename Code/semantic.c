@@ -10,8 +10,8 @@ SA(void, Def, bool field);
 SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field, bool curscope);
 SA(Symbol*, FunDec, TypeDescriptor * returntype, bool declaration);
 SA(TypeDescriptor*, Exp, bool LeftHand);
-SA(void, StmtList, TypeDescriptor * returntype); // TODO
-SA(void, Stmt, TypeDescriptor * returntype);  // TODO
+SA(void, StmtList, TypeDescriptor * returntype);
+SA(void, Stmt, TypeDescriptor * returntype); // Working ON
 
 /* wrap-up function of semantic analysis stage */
 void SemanticAnalysis(const struct CST_node* root){
@@ -585,5 +585,80 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
             }
         default : /* error */
             return BasicError();
+    }
+}
+
+SA(void, StmtList, TypeDescriptor * returntype){
+    struct CST_node * curStmtList = n;
+    while(curStmtList->child_cnt != 0){
+        SemanticAnalysisStmt(curStmtList->child_list[0],symtab,returntype);
+        curStmtList = curStmtList->child_list[1];
+    }
+}
+
+SA(void, Stmt, TypeDescriptor * returntype){
+    int Production;
+    switch(n->child_cnt){
+        case 1 : Production = 2; break;
+        case 2 : Production = 1; break;
+        case 3 : Production = 3; break;
+        case 5 : {
+            switch(get_symtype(n->child_list[0]->compact_type)){
+                case SYM(IF) : Production = 4; break;
+                case SYM(WHILE) : Production = 6; break;
+                default : Production = 0; break;
+            }
+            break;
+        }
+        case 7 : Production = 5; break;
+        default : Production = 0; break;
+    }
+    switch(Production){
+        case 1 : /* Exp SEMI */
+            {
+                SemanticAnalysisExp(n->child_list[0],symtab,false);
+                break;
+            }
+        case 2 : /* CompSt */
+            {
+                OpenScope(symtab,"CompSt");
+                SemanticAnalysisDefList(n->child_list[0]->child_list[1],symtab,false);
+                SemanticAnalysisStmtList(n->child_list[0]->child_list[2],symtab,returntype);
+                CloseScope(symtab);
+                break;
+            }
+        case 3 : /* RETURN Exp SEMI */
+            {
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[1],symtab,false);
+                if(!IsEqualType(exptype,returntype))
+                    ReportSemanticError(8,0,"Unmatch function return type");
+                break;
+            }
+        case 4 : /* IF LP Exp RP Stmt */
+            {
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,false);
+                if(!IsEqualType(exptype,BasicInt()))
+                    ReportSemanticError(0,0,"Expect int value expression");
+                SemanticAnalysisStmt(n->child_list[4],symtab,returntype);
+                break;
+            }
+        case 5 : /* IF LP Exp RP Stmt ELSE Stmt */
+            {
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,false);
+                if(!IsEqualType(exptype,BasicInt()))
+                    ReportSemanticError(0,0,"Expect int value expression");
+                SemanticAnalysisStmt(n->child_list[4],symtab,returntype);
+                SemanticAnalysisStmt(n->child_list[6],symtab,returntype);
+                break;
+            }
+        case 6 : /* WHILE LP Exp RP Stmt */
+            {
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,false);
+                if(!IsEqualType(exptype,BasicInt()))
+                    ReportSemanticError(0,0,"Expect int value expression");
+                SemanticAnalysisStmt(n->child_list[4],symtab,returntype);
+                break;
+            }
+        default : break;
     }
 }
