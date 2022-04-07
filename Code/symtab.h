@@ -18,27 +18,6 @@ typedef struct Scope Scope;
 typedef struct SymbolTable SymbolTable;
 typedef struct SymbolHashTable SymbolHashTable;
 
-DEFINE_RASTACK(Symbol,256)
-DEFINE_RASTACK(Scope,256)
-
-/* Structure to realize the Store and Search Functions of symbol table */
-struct SymbolTable{
-    SymbolHashTable symhtable;
-    SymbolStack * symstack;
-    ScopeStack * scopstack;
-};
-
-/* Structure to realize the hash-list */
-struct SymbolHashTable{
-    int hashlist[HASHTABLESIZE];
-};
-
-struct Symbol{
-    char* id; // point to the id field of cst_id_node
-    int pre,nxt;
-    Attribute attribute;
-};
-
 /* Attribute infomation of the identifier */
 struct Attribute{
     enum {NONE,VARIABLE,FUNCTION,TYPENAME} IdClass;
@@ -54,6 +33,12 @@ struct Attribute{
     } Info;
 };
 
+struct Symbol{
+    char* id; // point to the id field of cst_id_node
+    int pre,nxt;
+    Attribute attribute;
+};
+
 /* Structure to realize nested scope functions */
 struct Scope{
     char * scopename;
@@ -61,6 +46,22 @@ struct Scope{
     int scopebeginidx;
     int scopeendidx;
 };
+
+DEFINE_RASTACK(Symbol,256)
+DEFINE_RASTACK(Scope,256)
+
+/* Structure to realize the hash-list */
+struct SymbolHashTable{
+    int hashlist[HASHTABLESIZE];
+};
+
+/* Structure to realize the Store and Search Functions of symbol table */
+struct SymbolTable{
+    SymbolHashTable symhtable;
+    SymbolStack * symstack;
+    ScopeStack * scopstack;
+};
+
 
 SymbolTable * CreatSymbolTable();
 void DestorySymbolTable(SymbolTable* s);

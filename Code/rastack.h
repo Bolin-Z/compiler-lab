@@ -100,7 +100,7 @@
         return r;                                                                       \
     }                                                                                   \
 \
-    void Pop##type##Stack(type##Stack * s){                                             \ 
+    void Pop##type##Stack(type##Stack * s){                                             \
         if(s->curidx == 0){                                                             \
             if(s->curpage == 0) return;                                                 \
             s->curpage -= 1;                                                            \
