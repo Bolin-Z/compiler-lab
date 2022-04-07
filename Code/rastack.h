@@ -21,14 +21,16 @@
 
 # define DEFINE_RASTACK(type,maxsize) \
 \
-    typedef struct type##Stack{            \
+    typedef struct type##Stack type##Stack;\
+\
+    struct type##Stack{                    \
         type ** pages;                     \
         int idx;                           \
         int curidx;                        \
         int curpage;                       \
         size_t capacity;                   \
         size_t numofpages;                 \
-    } type##Stack;                         \
+    };                                     \
     const size_t type##pagesize = maxsize; \
 \
     void Destory##type(type* t);

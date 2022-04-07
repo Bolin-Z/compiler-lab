@@ -12,29 +12,35 @@
 # define HASHTABLESIZE 1024 // 0x400
 # define DUMMYIDX 0
 
-/* Structure to realize the Store and Search Functions of symbol table */
-typedef struct SymbolTable{
-    SymbolHashTable symhtable;
-    SymbolStack * symstack;
-    ScopeStack * scopstack;
-} SymbolTable;
+typedef struct Symbol Symbol;
+typedef struct Attribute Attribute;
+typedef struct Scope Scope;
+typedef struct SymbolTable SymbolTable;
+typedef struct SymbolHashTable SymbolHashTable;
 
 DEFINE_RASTACK(Symbol,256)
 DEFINE_RASTACK(Scope,256)
 
-/* Structure to realize the hash-list */
-typedef struct SymbolHashTable{
-    int hashlist[HASHTABLESIZE];
-} SymbolHashTable;
+/* Structure to realize the Store and Search Functions of symbol table */
+struct SymbolTable{
+    SymbolHashTable symhtable;
+    SymbolStack * symstack;
+    ScopeStack * scopstack;
+};
 
-typedef struct Symbol{
+/* Structure to realize the hash-list */
+struct SymbolHashTable{
+    int hashlist[HASHTABLESIZE];
+};
+
+struct Symbol{
     char* id; // point to the id field of cst_id_node
     int pre,nxt;
     Attribute attribute;
-} Symbol;
+};
 
 /* Attribute infomation of the identifier */
-typedef struct Attribute{
+struct Attribute{
     enum {NONE,VARIABLE,FUNCTION,TYPENAME} IdClass;
     TypeDescriptor * IdType;
     union{
@@ -46,15 +52,15 @@ typedef struct Attribute{
         /* IdClass == TYPENAME */
         /* IdType stores the type that the typename defined */
     } Info;
-} Attribute;
+};
 
 /* Structure to realize nested scope functions */
-typedef struct Scope{
+struct Scope{
     char * scopename;
     /* Indicate idx of Symbol that is visible by current scope [b,e) */
     int scopebeginidx;
     int scopeendidx;
-} Scope;
+};
 
 SymbolTable * CreatSymbolTable();
 void DestorySymbolTable(SymbolTable* s);

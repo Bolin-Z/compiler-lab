@@ -43,19 +43,22 @@ static const char *const semanticerror[]= {
           0
 };
 
-typedef struct SemanticErrorMsg{
+typedef struct SemanticErrorMsg SemanticErrorMsg;
+typedef struct FunctionState FunctionState;
+
+struct SemanticErrorMsg{
     SemanticErrorMsg * next;
     int line;
     int semanticerrortype;
     SemanticErrorMsg * nextudfunmsg;
-} SemanticErrorMsg;
+};
 
-typedef struct FunctionState{
+struct FunctionState{
     FunctionState * next;
     char * functionname;
     bool defined;
     SemanticErrorMsg * udfunmsglist;
-} FunctionState;
+};
 
 SemanticErrorMsg * CreatMsg(int l, int type);
 void DestoryMsg(SemanticErrorMsg * msg);

@@ -8,12 +8,15 @@
 #include<stdio.h>
 #include<stdbool.h>
 
+typedef struct TypeDescriptor TypeDescriptor;
+typedef struct FieldList FieldList;
+
 /* Object that describe type. */
-typedef struct TypeDescriptor{
+struct TypeDescriptor{
     enum {ERROR, BASIC, ARRAY, STRUCTURE} TypeClass;
     union{
         /* TypeClass == BASIC */
-        enum {INT,FLOAT} Basic;
+        enum {BASICINT,BASICFLOAT} Basic;
         /* TypeClass == ARRAY */
         struct {TypeDescriptor * elem; int size;} Array;
         /* TypeClass == STRUCTURE */
@@ -21,14 +24,14 @@ typedef struct TypeDescriptor{
         /* TypeClass == ERROR */
         /* empty */
     };
-} TypeDescriptor;
+};
 
 /* Auxiliary data structure to help describe Structure type. */
-typedef struct FieldList{
+struct FieldList{
     char * FieldName; // points to the id field of cst_id_node
     TypeDescriptor * FieldType;
     FieldList * NextField;
-} FieldList;
+};
 
 void CreatTypeSystem();
 void DestoryTypeSystem();

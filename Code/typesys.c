@@ -25,10 +25,10 @@ TypeDescriptor * BasicError(){return BasicTypeError;}
 void CreatTypeSystem(){
     BasicTypeInt = CreatTypeDescriptor();
     BasicTypeInt->TypeClass = BASIC;
-    BasicTypeInt->Basic = INT;
+    BasicTypeInt->Basic = BASICINT;
     BasicTypeFloat = CreatTypeDescriptor();
     BasicTypeFloat->TypeClass = BASIC;
-    BasicTypeFloat->Basic = FLOAT;
+    BasicTypeFloat->Basic = BASICFLOAT;
     BasicTypeError = CreatTypeDescriptor();
     BasicTypeError->TypeClass = ERROR;
 }
