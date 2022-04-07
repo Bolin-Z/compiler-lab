@@ -30,8 +30,8 @@ int main(int argc,char* argv[]){
         if(cst_root != NULL){
             print_CST(cst_root,0);
         }
+        destory_tree(cst_root);
     }
-    destory_tree(cst_root);
     cst_root = NULL;
     return 0;
 }
