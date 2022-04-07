@@ -40,8 +40,11 @@ int main(int argc,char* argv[]){
     if(!has_error){
         SemanticAnalysis(cst_root);
     }
+    
+    if(!has_error){
+        destory_tree(cst_root);
+    }
 
-    destory_tree(cst_root);
     cst_root = NULL;
     return 0;
 }
