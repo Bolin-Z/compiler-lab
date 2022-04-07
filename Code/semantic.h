@@ -8,7 +8,7 @@
 #include "typesys.h"
 #include "error.h"
 
-void SemanticAnalysis(const struct CST_node* root);
+void SemanticAnalysis(struct CST_node* root);
 
 
 #endif

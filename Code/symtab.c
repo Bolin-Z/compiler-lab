@@ -28,7 +28,7 @@ SymbolTable * CreatSymbolTable(){
     }
     for(int i = 0;i < HASHTABLESIZE;i++)
         st->symhtable.hashlist[i] = DUMMYIDX;
-    Symbol* dummy = PushSymbolStack(st);
+    Symbol* dummy = PushSymbolStack(st->symstack);
     CreatTypeSystem();
     return st;
 }

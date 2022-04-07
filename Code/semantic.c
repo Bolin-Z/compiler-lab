@@ -1,6 +1,6 @@
 #include "semantic.h"
 
-#define SA(RETURN,NAME,...) RETURN SemanticAnalysis##NAME (const struct CST_node* n, SymbolTable * symtab,##__VA_ARGS__)
+#define SA(RETURN,NAME,...) RETURN SemanticAnalysis##NAME (struct CST_node* n, SymbolTable * symtab,##__VA_ARGS__)
 SA(void, Program);
 SA(void, ExtDefList);
 SA(void, ExtDef);
@@ -14,7 +14,7 @@ SA(void, StmtList, TypeDescriptor * returntype);
 SA(void, Stmt, TypeDescriptor * returntype); // Working ON
 
 /* Wrap-up function of semantic analysis stage */
-void SemanticAnalysis(const struct CST_node* root){
+void SemanticAnalysis(struct CST_node* root){
     CreatTypeSystem();
     SymbolTable * symtable = CreatSymbolTable();
 
@@ -126,7 +126,7 @@ SA(TypeDescriptor*, Specifier){
                     case 5 : /* STRUCT OptTag LC DefList RC */
                         {
                             struct CST_node * opttag = st->child_list[1];
-                            struct CST_ndoe * deflist = st->child_list[3];
+                            struct CST_node * deflist = st->child_list[3];
                             Symbol * newst = NULL;
                             if(opttag->child_cnt != 0){
                                 char * stname = ((struct CST_id_node *)(opttag->child_list[0]))->ID;

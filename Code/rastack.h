@@ -31,7 +31,7 @@
         size_t capacity;                   \
         size_t numofpages;                 \
     };                                     \
-    const size_t type##pagesize = maxsize; \
+    const static size_t type##pagesize = maxsize; \
 \
     void Destory##type(type* t);
 
@@ -108,7 +108,7 @@
         }                                                                               \
         s->idx -= 1;                                                                    \
         s->curidx -= 1;                                                                 \
-        DestorySymbol(&(s->pages[s->curpage][s->curidx]));                              \
+        Destory##type(&(s->pages[s->curpage][s->curidx]));                              \
     }                                                                                   \
 \
     type* Access##type##Stack(type##Stack * s,int index){                               \
