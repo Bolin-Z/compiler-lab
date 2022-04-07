@@ -13,18 +13,19 @@ SA(TypeDescriptor*, Exp, bool LeftHand);
 SA(void, StmtList, TypeDescriptor * returntype);
 SA(void, Stmt, TypeDescriptor * returntype); // Working ON
 
-/* wrap-up function of semantic analysis stage */
+/* Wrap-up function of semantic analysis stage */
 void SemanticAnalysis(const struct CST_node* root){
     CreatTypeSystem();
     SymbolTable * symtable = CreatSymbolTable();
 
     SemanticAnalysisProgram(root,symtable);
+    OutputSemanticErrorMessage();
 
     DestorySymbolTable(symtable);
     DestoryTypeSystem();
 }
 
-/* Program --> ExtDefList */
+/* Program := ExtDefList */
 SA(void, Program){
     OpenScope(symtab,"Global_Scope");
     SemanticAnalysisExtDefList(n->child_list[0],symtab);
@@ -39,6 +40,7 @@ SA(void,ExtDefList){
     }
 }
 
+/* ExtDef := Specifier ExtDecList SEMI | Specifier SEMI | Specifier FunDec CompSt | Specifier FunDec SEMI */
 SA(void, ExtDef){
     int Production;
     switch(get_symtype(n->child_list[1]->compact_type)){
@@ -70,7 +72,7 @@ SA(void, ExtDef){
         case 3 : /* Specifier FunDec CompSt */
             {
                 TypeDescriptor * rttype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
-                Symbol * newfun = SemanticAnalysisFunDec(n->child_list[1],symtab,rttype,false);
+                Symbol * newfun = SemanticAnalysisFunDec(n->child_list[1],symtab,rttype,true);
                 /* Semantic Analysis CompSt */
                 SemanticAnalysisDefList(n->child_list[2]->child_list[1], symtab, false);
                 SemanticAnalysisStmtList(n->child_list[2]->child_list[2], symtab, newfun->attribute.IdType);
@@ -80,7 +82,7 @@ SA(void, ExtDef){
         case 4 : /* Specifier FunDec SEMI */
             {
                 TypeDescriptor * rttype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
-                SemanticAnalysisFunDec(n->child_list[1],symtab,rttype,true);
+                SemanticAnalysisFunDec(n->child_list[1],symtab,rttype,false);
                 break;
             }
         default : /* error */
@@ -88,79 +90,79 @@ SA(void, ExtDef){
     }
 }
 
+/* Specifier := TYPE | StrucSpecifier */
 /*
     Creat a TypeDescriptor and return a pointer to it.
 */
 SA(TypeDescriptor*, Specifier){
     switch(get_symtype(n->child_list[0]->compact_type)){
-        case SYM(TYPE) : 
-            struct CST_mul_node * cur = (struct CST_mul_node * )(n->child_list[0]);
-            switch(cur->tktype){
-                case TK(INT) : return BasicInt();
-                case TK(FLOAT) : return BasicFloat();
-                default : /* error */
-                    return BasicError();
+        case SYM(TYPE) :
+            {
+                struct CST_mul_node * cur = (struct CST_mul_node * )(n->child_list[0]);
+                switch(cur->tktype){
+                    case TK(INT) : return BasicInt();
+                    case TK(FLOAT) : return BasicFloat();
+                    default : /* error */
+                        return BasicError();
+                }
             }
         case SYM(StructSpecifier) :
-            struct CST_node * st = n->child_list[0];
-            switch(st->child_cnt){
-                case 2 : /* STRUCT Tag */
-                    struct CST_node * tag = st->child_list[1];
-                    struct CST_id_node * id = (struct CST_id_node *)(tag->child_list[0]);
-                    Symbol*  type = LookUp(symtab,id->ID,false);
-                    if(!type){
-                        ReportSemanticError(0,0,"structure type was not defined");
+            {
+                struct CST_node * st = n->child_list[0];
+                switch(st->child_cnt){
+                    case 2 : /* STRUCT Tag */
+                        {
+                            struct CST_node * tag = st->child_list[1];
+                            struct CST_id_node * id = (struct CST_id_node *)(tag->child_list[0]);
+                            Symbol*  type = LookUp(symtab,id->ID,false);
+                            if(!type || type->attribute.IdClass != TYPENAME){
+                                /* Use undefined struct type. */
+                                ReportSemanticError(tag->lineno,17,NULL);
+                                return BasicError();
+                            }else{
+                                return CopyTypeDescriptor(type->attribute.IdType);
+                            }
+                        }
+                    case 5 : /* STRUCT OptTag LC DefList RC */
+                        {
+                            struct CST_node * opttag = st->child_list[1];
+                            struct CST_ndoe * deflist = st->child_list[3];
+                            Symbol * newst = NULL;
+                            if(opttag->child_cnt != 0){
+                                char * stname = ((struct CST_id_node *)(opttag->child_list[0]))->ID;
+                                /* structure name is defined globally */
+                                if(LookUp(symtab,stname,false) != NULL){
+                                    /* Duplicate definition of struct name. */
+                                    ReportSemanticError(opttag->lineno,16,NULL);
+                                }
+                                newst = Insert(symtab,stname);
+                                newst->attribute.IdClass = TYPENAME;
+                            }
+                            /* Construct a structure TypeDescriptor */
+                            Scope * newscope = OpenScope(symtab,"Struct_Field");
+                            SemanticAnalysisDefList(deflist,symtab,true);
+                            /* Construct FieldList */
+                            FieldList * head = NULL;
+                            FieldList * pre = NULL;
+                            for(int i = newscope->scopebeginidx;i < newscope->scopeendidx;i++){
+                                Symbol * tempsym = Access(symtab,i);
+                                if(tempsym->attribute.IdClass == VARIABLE){
+                                    FieldList * f = CreatField();
+                                    f->FieldName = tempsym->id;
+                                    f->FieldType = CopyTypeDescriptor(tempsym->attribute.IdType);
+                                    if(!head) head = f;
+                                    if(!pre) pre->NextField = f;
+                                    pre = f;
+                                }
+                            }
+                            CloseScope(symtab);
+                            TypeDescriptor * newsttype = CreatStructureDescriptor(head,false);
+                            if(newst) newst->attribute.IdType = newsttype;
+                            return newsttype;
+                        }
+                    default : /* error */
                         return BasicError();
-                    }else{
-                        if(type->attribute.IdClass != TYPENAME){
-                            ReportSemanticError(0,0,"Not a structure type name");
-                            return BasicError();
-                        }else{
-                            return CopyTypeDescriptor(type->attribute.IdType);
-                        }
-                    }
-                case 5 : /* STRUCT OptTag LC DefList RC */
-                    struct CST_node * opttag = st->child_list[1];
-                    struct CST_ndoe * deflist = st->child_list[3];
-                    Symbol * newst = NULL;
-                    if(opttag->child_cnt != 0){
-                        /* define a new structure type */
-                        char * stname = ((struct CST_id_node *)(opttag->child_list[0]))->ID;
-                        /* structure name is defined globally */
-                        if(LookUp(symtab,stname,false) != NULL)
-                            ReportSemanticError(0,0,"Structure name is conflict with existing name");
-                        newst = Insert(symtab,stname);
-                        newst->attribute.IdClass = TYPENAME;
-                    }
-                    /* Construct a structure TypeDescriptor */
-                    /* Type name is in the outer-scope */
-                    Scope * newscope = OpenScope(symtab,NULL);
-                    SemanticAnalysisDefList(deflist,symtab,true);
-                    /* Construct FieldList */
-                    FieldList * head = NULL;
-                    FieldList * pre = NULL;
-                    for(int i = newscope->scopebeginidx;i < newscope->scopeendidx;i++){
-                        Symbol * tempsym = Access(symtab,i);
-                        switch(tempsym->attribute.IdClass){
-                            case VARIABLE : /* field */
-                                FieldList * f = CreatField();
-                                f->FieldName = tempsym->id;
-                                f->FieldType = CopyTypeDescriptor(tempsym->attribute.IdType);
-                                if(!head) head = f;
-                                if(!pre) pre->NextField = f;
-                                pre = f;
-                                break;
-                            default : /* ignore TYPENAME */ 
-                                break;
-                        }
-                    }
-                    CloseScope(symtab);
-                    TypeDescriptor * newsttype = CreatStructureDescriptor(head,false);
-                    if(newst) newst->attribute.IdType = newsttype;
-                    return newsttype;
-                    break;
-                default : /* error */
-                    return BasicError();
+                }
             }
         default : /* error */
             return BasicError();
@@ -175,21 +177,26 @@ SA(void, DefList, bool fields){
     }
 }
 
-/* Def --> Specifier DecList SEMI */
+/* Def := Specifier DecList SEMI */
 SA(void, Def, bool field){
     /* basetype == BasicError() is acceptable, however BasicTypeError will be assigned to IDs. */
     TypeDescriptor * basetype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
     struct CST_node * curDecList = n->child_list[1];
     while(true){
         struct CST_node * curDec = curDecList->child_list[0];
-        Symbol * newsymbol = SemanticAnalysisVarDec(curDec->child_list[0],symtab,basetype,field,true);
+        struct CST_node * curVarDec = curDec->child_list[0];
+        Symbol * newsymbol = SemanticAnalysisVarDec(curVarDec,symtab,basetype,field,true);
         if(curDec->child_cnt == 3){
             /* VarDec ASSIGNOP Exp */
             TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab,false);
-            if(field) ReportSemanticError(0,0,"Field can not be initialized");
-            else{
-                if((!IsErrorType(exptype)) && (!IsErrorType(newsymbol->attribute.IdType)) && (!IsEqualType(newsymbol->attribute.IdType,exptype)))
-                    ReportSemanticError(0,0,"Type mismatched for assignment");
+            if(field){
+                /* Initialization of field. */
+                ReportSemanticError(curDec->lineno,15,NULL);
+            }else{
+                if((!IsErrorType(exptype)) && (!IsErrorType(newsymbol->attribute.IdType)) && (!IsEqualType(newsymbol->attribute.IdType,exptype))){
+                    /* Type mismatched for assignment. */
+                    ReportSemanticError(curDec->lineno,5,NULL);
+                }
             }
         }
         if(curDecList->child_cnt == 1) break;
@@ -197,6 +204,7 @@ SA(void, Def, bool field){
     }
 }
 
+/* VarDec := ID | VarDec LB INT RB */
 SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field, bool curscope){
     struct CST_node * curVarDec = n;
     TypeDescriptor * pretype = basetype;
@@ -210,9 +218,11 @@ SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field, bool curscope){
     char * varname = ((struct CST_id_node*)(curVarDec->child_list[0]))->ID;
     if(LookUp(symtab,varname,curscope) != NULL){
         if(field){
-            ReportSemanticError(0,0,"Field name conflict");
+            /* Redefinition of field. */
+            ReportSemanticError(curVarDec->lineno,15,NULL);
         }else{
-            ReportSemanticError(0,0,"Variable name conflict");
+            /* Duplicate definition of variable */
+            ReportSemanticError(curVarDec->lineno,3,NULL);
         }
     }
     Symbol * newsymbol = Insert(symtab,varname);
@@ -221,29 +231,33 @@ SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field, bool curscope){
     return newsymbol;
 }
 
-SA(Symbol*, FunDec, TypeDescriptor * returntype, bool declaration){
-    /* FunDec := ID LP RP | ID LP VarList RP  */
+/* FunDec := ID LP RP | ID LP VarList RP */
+SA(Symbol*, FunDec, TypeDescriptor * returntype, bool definition){
     char * funid = ((struct CST_id_node*)(n->child_list[0]))->ID;
     Symbol * newfun = NULL;
     Symbol * oldfun = LookUp(symtab,funid,false);
     if((oldfun != NULL) && (oldfun->attribute.IdClass != FUNCTION)){
-        ReportSemanticError(0,0,"Function name conflicts with variable or structure name");
+        /* Duplicate definition of variable. */
+        ReportSemanticError(n->lineno,3,NULL);
         oldfun = NULL;
     }
 
     if(oldfun != NULL){
-        if(oldfun->attribute.Info.Func.defined && (!declaration)){
-            ReportSemanticError(4,0,"Redefined of function");
+        if(oldfun->attribute.Info.Func.defined && definition){
+            /* Redefinition of function. */
+            ReportSemanticError(n->lineno,4,NULL);
         }else{
-            if(!IsEqualType(returntype,oldfun->attribute.IdType))
-                ReportSemanticError(19,0,"Function declaration/definition conflict: return type");
+            if(!IsEqualType(returntype,oldfun->attribute.IdType)){
+                /* Function declaration or definition conflict. */
+                ReportSemanticError(n->lineno,19,NULL);
+            }
         }
     }
     /* always insert */
     newfun = Insert(symtab,funid);
     newfun->attribute.IdClass = FUNCTION;
     newfun->attribute.IdType = returntype;
-    newfun->attribute.Info.Func.defined = UpdateFunctionState(0,funid,declaration);
+    newfun->attribute.Info.Func.defined = UpdateFunctionState(0,funid,definition);
 
     Scope * funscope = OpenScope(symtab,newfun->id);
 
@@ -273,11 +287,13 @@ SA(Symbol*, FunDec, TypeDescriptor * returntype, bool declaration){
 
     if(oldfun != NULL){
         if(oldfun->attribute.Info.Func.Argc != newArgc){
-            ReportSemanticError(19,0,"Function definition/declaration conflict: arguments number");
+            /* Function declaration or definition conflict. */
+            ReportSemanticError(n->lineno,19,NULL);
         }else{
             for(int i = 0;i < newArgc;i++){
                 if(!IsEqualType(newArgTypeList[i],oldfun->attribute.Info.Func.ArgTypeList[i])){
-                    ReportSemanticError(19,0,"Function definition/declaration conflict: argument type");
+                    /* Function declaration or definition conflict. */
+                    ReportSemanticError(n->lineno,19,NULL);
                     break;
                 }
             }
@@ -287,13 +303,13 @@ SA(Symbol*, FunDec, TypeDescriptor * returntype, bool declaration){
     newfun->attribute.Info.Func.Argc = newArgc;
     newfun->attribute.Info.Func.ArgTypeList = newArgTypeList;
 
-    if(declaration) CloseScope(symtab);
+    if(!definition) CloseScope(symtab);
     return newfun;
 }
 
 /* 
     Return a pointer to a TypeDescriptor that describes Exp.
-     No new TypeDescriptor will be created.
+    No new TypeDescriptor will be created.
 */
 SA(TypeDescriptor*, Exp, bool LeftHand){
     int Production;
@@ -348,7 +364,8 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     return BasicError();
                 }else{
                     if(!IsEqualType(lexp,rexp)){
-                        ReportSemanticError(0,0,"Type mismatched for assignment");
+                        /* Type mismatched for assignment. */
+                        ReportSemanticError(n->lineno,5,NULL);
                         return BasicError();
                     }
                     return lexp;
@@ -359,7 +376,8 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
         case 4 : /* Exp RELOP Exp */
             {
                 if(LeftHand){
-                    ReportSemanticError(0,0,"The left-hand side of an assignment must be left value");
+                    /* Appearance of rvalue on left hand side of assignment. */
+                    ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
                     TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,false);
@@ -370,8 +388,14 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     }else{
                         bool lint = IsEqualType(lexp,BasicInt());
                         bool rint = IsEqualType(rexp,BasicInt());
-                        if(!lint) ReportSemanticError(0,0,"Expected int value in lexp");
-                        if(!rint) ReportSemanticError(0,0,"Expected int value in rexp");
+                        if(!lint){
+                            /* Type mismatched for operands. */
+                            ReportSemanticError(n->child_list[0]->lineno,7,NULL);
+                        }
+                        if(!rint){
+                            /* Type mismatched for operands. */
+                            ReportSemanticError(n->child_list[2]->lineno,7,NULL);
+                        }
                         if(lint && rint) return BasicInt();
                         else return BasicError();
                     }
@@ -383,7 +407,8 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
         case 8 : /* Exp DIV Exp */
             {
                 if(LeftHand){
-                    ReportSemanticError(0,0,"The left-hand side of assignment must be left value");
+                    /* Appearance of rvalue on left hand side of assignment. */
+                    ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
                     TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,false);
@@ -395,12 +420,14 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                             if(IsEqualType(lexp,BasicInt()) || IsEqualType(lexp,BasicFloat()))
                                 return lexp;
                             else{
-                                ReportSemanticError(0,0,"Only int and float types can do arithmetic operation");
+                                /* Type mismatched for operands. */
+                                ReportSemanticError(n->lineno,7,NULL);
                                 return BasicError();
                             }                            
                         }
                         else{
-                            ReportSemanticError(0,0,"Type mismatched for operands");
+                            /* Type mismatched for operands. */
+                            ReportSemanticError(n->lineno,7,NULL);
                             return BasicError();
                         }
                     }
@@ -411,14 +438,16 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
         case 10 : /* MINUS Exp */
             {
                 if(LeftHand){
-                    ReportSemanticError(0,0,"The left-hand side of assignment must be left value");
+                    /* Appearance of rvalue on left hand side of assignment. */
+                    ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
                     TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[1],symtab,false);
                     if(IsEqualType(exp,BasicInt()) || IsEqualType(exp,BasicFloat()) || IsErrorType(exp)){
                         return exp;
                     }else{
-                        ReportSemanticError(0,0,"Only int and float types can do arithmetic operation");
+                        /* Type mismatched for operands. */
+                        ReportSemanticError(n->child_list[1]->lineno,7,NULL);
                         return BasicError();
                     }
                 }
@@ -426,14 +455,16 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
         case 11 : /* NOT Exp */
             {
                 if(LeftHand){
-                    ReportSemanticError(0,0,"The left-hand side of assignment must be left value");
+                    /* Appearance of rvalue on left hand side of assignment. */
+                    ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
                     TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[1],symtab,false);
                     if(IsEqualType(exp,BasicInt()) || IsErrorType(exp)){
                         return exp;
                     }else{
-                        ReportSemanticError(0,0,"Only int types can do logical operation");
+                        /* Type mismatched for operands. */
+                        ReportSemanticError(n->child_list[1]->lineno,7,NULL);
                         return BasicError();
                     }
                 }
@@ -441,35 +472,44 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
         case 12 : /* ID LP Args RP */
             {
                 if(LeftHand){
-                    ReportSemanticError(0,0,"The left-hand side of assignment must be left value");
+                    /* Appearance of rvalue on left hand side of assignment. */
+                    ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
                     char * funid = ((struct CST_id_node *)(n->child_list[0]))->ID;
                     Symbol * fun = LookUp(symtab,funid,false);
                     if(fun == NULL){
-                        ReportSemanticError(2,0,"Function was used before it was defined");
+                        /* Use undefined function. */
+                        ReportSemanticError(n->lineno,2,NULL);
                         return BasicError();
                     }else if(fun->attribute.IdClass != FUNCTION){
-                        ReportSemanticError(11,0,"Use () operator on non-function id");
+                        /* Use function call operand on non-function identifier. */
+                        ReportSemanticError(n->lineno,11,NULL);
                         return BasicError();
                     }else{
+                        if(fun->attribute.Info.Func.defined == false){
+                            /* Function was not defined yet. */
+                            ReportSemanticError(n->lineno,2,fun->id);
+                        }
                         struct CST_node * curArg = n->child_list[2];
                         int expectargnum = fun->attribute.Info.Func.Argc;
                         for(int i = 0;i < expectargnum;i++){
                             struct CST_node * curExp = curArg->child_list[0];
                             TypeDescriptor * curExptype = SemanticAnalysisExp(curExp,symtab,false);
                             TypeDescriptor * expecttype = fun->attribute.Info.Func.ArgTypeList[i];
-                            if(IsErrorType(curExp)){
+                            if(IsErrorType(curExptype)){
                                 return BasicError();
                             }
                             if(!IsEqualType(expecttype,curExptype)){
-                                ReportSemanticError(9,0,"Argument type unmatched");
+                                /* Arguments number or type mismatch. */
+                                ReportSemanticError(curExp->lineno,9,NULL);
                                 return BasicError();
                             }
-                            bool lastexparg = (i == expectargnum - 1);
+                            bool lastexparg = (i == (expectargnum - 1));
                             bool lastrealarg = (curArg->child_cnt == 1);
                             if((lastexparg && (!lastrealarg)) || ((!lastexparg) && lastrealarg)){
-                                ReportSemanticError(9,0,"Argument number unmatched");
+                                /* Arguments number or type mismatch. */
+                                ReportSemanticError(n->lineno,9,NULL);
                                 return BasicError();
                             }
                             curArg = curArg->child_list[2];
@@ -481,20 +521,24 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
         case 13 : /* ID LP RP */
             {
                 if(LeftHand){
-                    ReportSemanticError(0,0,"The left-hand side of assignment must be left value");
+                    /* Appearance of rvalue on left hand side of assignment. */
+                    ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
                     char * funid = ((struct CST_id_node *)(n->child_list[0]))->ID;
                     Symbol * fun = LookUp(symtab,funid,false);
                     if(fun == NULL){
-                        ReportSemanticError(2,0,"Function was used before it was defined");
+                        /* Use undefined function. */
+                        ReportSemanticError(n->lineno,2,NULL);
                         return BasicError();
                     }else if(fun->attribute.IdClass != FUNCTION){
-                        ReportSemanticError(11,0,"Use () operator on non-function id");
+                        /* Use function call operand on non-function identifier. */
+                        ReportSemanticError(n->lineno,11,NULL);
                         return BasicError();
                     }else{
                         if(fun->attribute.Info.Func.Argc != 0){
-                            ReportSemanticError(9,0,"Argument number unmatched");
+                            /* Arguments number or type mismatch. */
+                            ReportSemanticError(n->lineno,9,NULL);
                             return BasicError();
                         }else{
                             return fun->attribute.IdType;
@@ -504,7 +548,6 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
             }
         case 14 : /* Exp LB Exp RB */
             {
-                /* WARING: LeftHand ? */
                 TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,LeftHand);
                 TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,false);
                 bool rterror = false;
@@ -512,7 +555,8 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     rterror = true;
                 }else{
                     if(lexp->TypeClass != ARRAY){
-                        ReportSemanticError(10,0,"Use [] operator on non-array type variable");
+                        /* Use array access operand on non-array type variable. */
+                        ReportSemanticError(n->lineno,10,NULL);
                         rterror = true;
                     }
                 }
@@ -520,7 +564,8 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     rterror = true;
                 }else{
                     if(!IsEqualType(rexp,BasicInt())){
-                        ReportSemanticError(12,0,"Expect int value inside []");
+                        /* Expect interger inside array access operand. */
+                        ReportSemanticError(n->child_list[2]->lineno,12,NULL);
                         rterror = true;
                     }
                 }
@@ -533,7 +578,8 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     return BasicError();
                 }else{
                     if(exp->TypeClass != STRUCTURE){
-                        ReportSemanticError(13,0,"Use . operator on non-structure type variable");
+                        /* Use field access operand on non-struct type variable. */
+                        ReportSemanticError(n->lineno,13,NULL);
                         return BasicError();
                     }else{
                         FieldList * curField = exp->Structure;
@@ -544,7 +590,8 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                             }
                             curField = curField->NextField;
                         }
-                        ReportSemanticError(14,0,"Field 'fieldid' was not defined");
+                        /* Access to undefined field. */
+                        ReportSemanticError(n->lineno,14,NULL);
                         return BasicError();
                     }
                 }         
@@ -554,11 +601,13 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                 char * idname = ((struct CST_id_node*)(n->child_list[0]))->ID;
                 Symbol * id = LookUp(symtab,idname,false);
                 if(id == NULL){
-                    ReportSemanticError(1,0,"Use undefined variable");
+                    /* Use undefined variable. */
+                    ReportSemanticError(n->lineno,1,NULL);
                     return BasicError();
                 }else{
                     if(id->attribute.IdClass != VARIABLE){
-                        ReportSemanticError(0,0,"Id is not a variable");
+                        /* Use undefined variable. */
+                        ReportSemanticError(n->lineno,1,NULL);
                         return BasicError();
                     }else{
                         return id->attribute.IdType;
@@ -568,7 +617,8 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
         case 17 : /* INT */
             {
                 if(LeftHand){
-                    ReportSemanticError(0,0,"The left-hand side of assignment must be left value");
+                    /* Appearance of rvalue on left hand side of assignment. */
+                    ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
                     return BasicInt();
@@ -577,7 +627,8 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
         case 18 : /* FLOAT */
             {
                 if(LeftHand){
-                    ReportSemanticError(0,0,"The left-hand side of assignment must be left value");
+                    /* Appearance of rvalue on left hand side of assignment. */
+                    ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
                     return BasicFloat();
@@ -631,22 +682,27 @@ SA(void, Stmt, TypeDescriptor * returntype){
             {
                 TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[1],symtab,false);
                 if(!IsEqualType(exptype,returntype))
-                    ReportSemanticError(8,0,"Unmatch function return type");
+                    /* Type mismatched for return type. */
+                    ReportSemanticError(n->child_list[1]->lineno,8,NULL);
                 break;
             }
         case 4 : /* IF LP Exp RP Stmt */
             {
                 TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,false);
-                if(!IsEqualType(exptype,BasicInt()))
-                    ReportSemanticError(0,0,"Expect int value expression");
+                if(!IsEqualType(exptype,BasicInt())){
+                    /* Type mismatched for operands. */
+                    ReportSemanticError(n->child_list[2]->lineno,7,NULL);
+                }
                 SemanticAnalysisStmt(n->child_list[4],symtab,returntype);
                 break;
             }
         case 5 : /* IF LP Exp RP Stmt ELSE Stmt */
             {
                 TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,false);
-                if(!IsEqualType(exptype,BasicInt()))
-                    ReportSemanticError(0,0,"Expect int value expression");
+                if(!IsEqualType(exptype,BasicInt())){
+                    /* Type mismatched for operands. */
+                    ReportSemanticError(n->child_list[2]->lineno,7,NULL);
+                }
                 SemanticAnalysisStmt(n->child_list[4],symtab,returntype);
                 SemanticAnalysisStmt(n->child_list[6],symtab,returntype);
                 break;
@@ -654,8 +710,10 @@ SA(void, Stmt, TypeDescriptor * returntype){
         case 6 : /* WHILE LP Exp RP Stmt */
             {
                 TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,false);
-                if(!IsEqualType(exptype,BasicInt()))
-                    ReportSemanticError(0,0,"Expect int value expression");
+                if(!IsEqualType(exptype,BasicInt())){
+                    /* Type mismatched for operands. */
+                    ReportSemanticError(n->child_list[2]->lineno,7,NULL);
+                }
                 SemanticAnalysisStmt(n->child_list[4],symtab,returntype);
                 break;
             }

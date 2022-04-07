@@ -131,6 +131,7 @@ bool UpdateFunctionState(int line, char * funid, bool definition){
                     curmsg = curmsg->nextudfunmsg;
                 }
             }else{
+                /* Function was declared but not defined. */
                 SemanticErrorMsg * msg = AppendMsg(line,18);
                 msg->nextudfunmsg = find->udfunmsglist;
                 find->udfunmsglist = msg;
@@ -140,6 +141,7 @@ bool UpdateFunctionState(int line, char * funid, bool definition){
     }else{
         FunctionState * newfun = CreatFunctionState(funid, definition);
         if(!definition){
+            /* Function was declared but not defined. */
             newfun->udfunmsglist = AppendMsg(line,18);
         }
         newfun->next = FunList;
