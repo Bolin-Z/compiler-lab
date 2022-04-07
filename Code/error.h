@@ -8,11 +8,12 @@
 #include<string.h>
 #include<stdbool.h>
 
+/* Syntax error */
 void error_msg(char error_type,int line_num,const char * format_msg, ...);
 
-void ReportSemanticError(int error_num,int line_num,char * tempmsg);
-bool UpdateFunctionState(int line_num, char* funid, bool declaration);
-void CreatSemanticErrorSystem();
-void DestorySemanticErrorSystem();
+/* Semantic error */
+void ReportSemanticError(int line, int errortype, char * funid);
+bool UpdateFunctionState(int line, char* funid, bool definition);
+void OutputSemanticErrorMessage();
 
 #endif
