@@ -38,9 +38,10 @@ int main(int argc,char* argv[]){
 
 /* Project 2 */
     if(!has_error){
+        printf("SemanticAnalysis\n");
         SemanticAnalysis(cst_root);
     }
-    
+
     if(!has_error){
         destory_tree(cst_root);
     }

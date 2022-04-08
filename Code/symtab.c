@@ -36,7 +36,6 @@ SymbolTable * CreatSymbolTable(){
 void DestorySymbolTable(SymbolTable * s){
     DestorySymbolStack(s->symstack);
     DestoryScopeStack(s->scopstack);
-    DestoryTypeSystem();
     free(s);
 }
 
