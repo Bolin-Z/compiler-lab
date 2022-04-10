@@ -151,7 +151,7 @@ SA(TypeDescriptor*, Specifier){
                                     f->FieldName = tempsym->id;
                                     f->FieldType = CopyTypeDescriptor(tempsym->attribute.IdType);
                                     if(!head) head = f;
-                                    if(!pre) pre->NextField = f;
+                                    if(pre) pre->NextField = f;
                                     pre = f;
                                 }
                             }
