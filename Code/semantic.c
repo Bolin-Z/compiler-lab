@@ -209,10 +209,8 @@ SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field){
     struct CST_node * curVarDec = n;
     TypeDescriptor * pretype = basetype;
     while(curVarDec->child_cnt != 1){
-        if(!IsErrorType(pretype)){
-            int arsize = ((struct CST_int_node *)(curVarDec->child_list[2]))->intval;
-            pretype = CreatArrayDescriptor(pretype,arsize,false);
-        }
+        int arsize = ((struct CST_int_node *)(curVarDec->child_list[2]))->intval;
+        pretype = CreatArrayDescriptor(pretype,arsize,false);
         curVarDec = curVarDec->child_list[0];
     }
     char * varname = ((struct CST_id_node*)(curVarDec->child_list[0]))->ID;
