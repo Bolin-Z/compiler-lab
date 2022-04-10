@@ -89,6 +89,7 @@ TypeDescriptor * CopyTypeDescriptor(TypeDescriptor * src){
             case STRUCTURE :
                 dst = CreatTypeDescriptor();
                 if(dst){
+                    dst->TypeClass = STRUCTURE;
                     dst->Structure = CopyFieldList(src->Structure);
                     if(!dst->Structure){
                         DestoryTypeDescriptor(dst);
