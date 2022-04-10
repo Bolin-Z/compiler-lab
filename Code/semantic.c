@@ -7,7 +7,7 @@ SA(void, ExtDef);
 SA(TypeDescriptor*, Specifier);
 SA(void, DefList, bool fields);
 SA(void, Def, bool field);
-SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field, bool curscope);
+SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field);
 SA(Symbol*, FunDec, TypeDescriptor * returntype, bool declaration);
 SA(TypeDescriptor*, Exp, bool LeftHand);
 SA(void, StmtList, TypeDescriptor * returntype);
@@ -58,7 +58,7 @@ SA(void, ExtDef){
                 TypeDescriptor * basetype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
                 struct CST_node * curExtDecList = n->child_list[1];
                 while(true){
-                    SemanticAnalysisVarDec(curExtDecList->child_list[0],symtab,basetype,false,true);
+                    SemanticAnalysisVarDec(curExtDecList->child_list[0],symtab,basetype,false);
                     if(curExtDecList->child_cnt == 1) break;
                     else curExtDecList = curExtDecList->child_list[2];
                 }
@@ -185,7 +185,7 @@ SA(void, Def, bool field){
     while(true){
         struct CST_node * curDec = curDecList->child_list[0];
         struct CST_node * curVarDec = curDec->child_list[0];
-        Symbol * newsymbol = SemanticAnalysisVarDec(curVarDec,symtab,basetype,field,true);
+        Symbol * newsymbol = SemanticAnalysisVarDec(curVarDec,symtab,basetype,field);
         if(curDec->child_cnt == 3){
             /* VarDec ASSIGNOP Exp */
             TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab,false);
@@ -205,7 +205,7 @@ SA(void, Def, bool field){
 }
 
 /* VarDec := ID | VarDec LB INT RB */
-SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field, bool curscope){
+SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field){
     struct CST_node * curVarDec = n;
     TypeDescriptor * pretype = basetype;
     while(curVarDec->child_cnt != 1){
@@ -216,13 +216,22 @@ SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field, bool curscope){
         curVarDec = curVarDec->child_list[0];
     }
     char * varname = ((struct CST_id_node*)(curVarDec->child_list[0]))->ID;
-    if(LookUp(symtab,varname,curscope) != NULL){
+    Symbol * checkglobal = LookUp(symtab,varname,false);
+    Symbol * checklocal = LookUp(symtab,varname,true);
+    if(checklocal != NULL){
         if(field){
             /* Redefinition of field. */
             ReportSemanticError(curVarDec->lineno,15,NULL);
         }else{
             /* Duplicate definition of variable */
             ReportSemanticError(curVarDec->lineno,3,NULL);
+        }
+    }else{
+        if(checkglobal != NULL){
+            if(checkglobal->attribute.IdClass != VARIABLE){
+                /* Duplicate definition of variable */
+                ReportSemanticError(curVarDec->lineno,3,NULL);
+            }
         }
     }
     Symbol * newsymbol = Insert(symtab,varname);
@@ -270,7 +279,7 @@ SA(Symbol*, FunDec, TypeDescriptor * returntype, bool definition){
             struct CST_node * curSpecifier = curParamDec->child_list[0];
             struct CST_node * curVarDec = curParamDec->child_list[1];
             TypeDescriptor * basetype = SemanticAnalysisSpecifier(curSpecifier,symtab);
-            SemanticAnalysisVarDec(curVarDec,symtab,basetype,false,true);
+            SemanticAnalysisVarDec(curVarDec,symtab,basetype,false);
             newArgc += 1;
             if(curVarList->child_cnt == 1) break;
             else curVarList = curVarList->child_list[2];
