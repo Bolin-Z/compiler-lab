@@ -264,7 +264,7 @@ SA(Symbol*, FunDec, TypeDescriptor * returntype, bool definition){
     newfun = Insert(symtab,funid);
     newfun->attribute.IdClass = FUNCTION;
     newfun->attribute.IdType = returntype;
-    newfun->attribute.Info.Func.defined = UpdateFunctionState(0,funid,definition);
+    newfun->attribute.Info.Func.defined = UpdateFunctionState(n->lineno,funid,definition);
 
     Scope * funscope = OpenScope(symtab,newfun->id);
 
