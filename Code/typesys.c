@@ -219,7 +219,8 @@ bool IsEqualType(TypeDescriptor * a,TypeDescriptor * b){
                     ptrb = ptrb->NextField;
                 }
                 return ((ptra == NULL)&&(ptrb == NULL));
-            case ERROR : /* ERROR type is not equl to any type */
+            case ERROR : /* treat error type equal to error type */
+                return true;
             default :
                 break;
         }
