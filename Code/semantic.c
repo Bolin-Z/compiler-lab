@@ -172,7 +172,7 @@ SA(TypeDescriptor*, Specifier){
 SA(void, DefList, bool fields){
     struct CST_node * curDefList = n;
     while(curDefList->child_cnt != 0){
-        SemanticAnalysisDef(n->child_list[0],symtab, fields);
+        SemanticAnalysisDef(curDefList->child_list[0],symtab, fields);
         curDefList = curDefList->child_list[1];
     }
 }
