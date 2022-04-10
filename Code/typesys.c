@@ -137,7 +137,7 @@ FieldList * CopyFieldList(FieldList * src){
     FieldList * srccur = src;
     FieldList * cphead = NULL;
     bool failed = false;
-    for(;src != NULL;){
+    for(;srccur != NULL;){
         FieldList * cpcur = CreatField();
         if(!cpcur){
             failed = true;
