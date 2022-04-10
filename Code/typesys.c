@@ -211,14 +211,16 @@ bool IsEqualType(TypeDescriptor * a,TypeDescriptor * b){
             case ARRAY :
                 return IsEqualType(a->Array.elem,b->Array.elem);
             case STRUCTURE :
-                FieldList * ptra = a->Structure;
-                FieldList * ptrb = b->Structure;
-                while((ptra!=NULL)&&(ptrb!=NULL)){
-                    if(!IsEqualType(ptra->FieldType,ptrb->FieldType)) break;
-                    ptra = ptra->NextField;
-                    ptrb = ptrb->NextField;
+                {
+                    FieldList * ptra = a->Structure;
+                    FieldList * ptrb = b->Structure;
+                    while((ptra!=NULL)&&(ptrb!=NULL)){
+                        if(!IsEqualType(ptra->FieldType,ptrb->FieldType)) break;
+                        ptra = ptra->NextField;
+                        ptrb = ptrb->NextField;
+                    }
+                    return ((ptra == NULL)&&(ptrb == NULL));
                 }
-                return ((ptra == NULL)&&(ptrb == NULL));
             case ERROR : /* treat error type equal to error type */
                 return true;
             default :
