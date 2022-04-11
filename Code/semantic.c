@@ -500,6 +500,11 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                         }
                         struct CST_node * curArg = n->child_list[2];
                         int expectargnum = fun->attribute.Info.Func.Argc;
+                        if(expectargnum == 0){
+                            /* Arguments number or type mismatch. */
+                            ReportSemanticError(n->lineno,9,NULL);
+                            return BasicError();
+                        }
                         for(int i = 0;i < expectargnum;i++){
                             struct CST_node * curExp = curArg->child_list[0];
                             TypeDescriptor * curExptype = SemanticAnalysisExp(curExp,symtab,false);
