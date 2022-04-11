@@ -408,6 +408,36 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                 }
             }
         case 4 : /* Exp RELOP Exp */
+            {
+                if(LeftHand){
+                    /* Appearance of rvalue on left hand side of assignment. */
+                    ReportSemanticError(n->lineno,6,NULL);
+                    return BasicError();
+                }else{
+                    TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,false);
+                    TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,false);
+                    if(IsErrorType(lexp) || IsErrorType(rexp)){
+                        return BasicError();
+                    }else{
+                        if(IsEqualType(lexp,rexp)){
+                            if(IsEqualType(lexp,BasicInt()) || IsEqualType(lexp,BasicFloat())){
+                                /* Relation operation should return boolean value */
+                                return BasicInt();
+                            }
+                            else{
+                                /* Type mismatched for operands. */
+                                ReportSemanticError(n->lineno,7,NULL);
+                                return BasicError();
+                            }                            
+                        }
+                        else{
+                            /* Type mismatched for operands. */
+                            ReportSemanticError(n->lineno,7,NULL);
+                            return BasicError();
+                        }
+                    }
+                }
+            }
         case 5 : /* Exp PLUS Exp */
         case 6 : /* Exp MINUS Exp */
         case 7 : /* Exp STAR Exp */
