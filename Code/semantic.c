@@ -380,7 +380,6 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
             }
         case 2 : /* Exp AND Exp */
         case 3 : /* Exp OR Exp */
-        case 4 : /* Exp RELOP Exp */
             {
                 if(LeftHand){
                     /* Appearance of rvalue on left hand side of assignment. */
@@ -408,6 +407,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     }
                 }
             }
+        case 4 : /* Exp RELOP Exp */
         case 5 : /* Exp PLUS Exp */
         case 6 : /* Exp MINUS Exp */
         case 7 : /* Exp STAR Exp */
