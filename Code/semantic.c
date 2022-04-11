@@ -253,6 +253,7 @@ SA(Symbol*, FunDec, TypeDescriptor * returntype, bool definition){
         if(oldfun->attribute.Info.Func.defined && definition){
             /* Redefinition of function. */
             ReportSemanticError(n->lineno,4,NULL);
+            oldfun = NULL;
         }else{
             if(!IsEqualType(returntype,oldfun->attribute.IdType)){
                 /* Function declaration or definition conflict. */
