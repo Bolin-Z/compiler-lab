@@ -8,8 +8,4 @@
 #include<string.h>
 #include<stdbool.h>
 
-/* declarations */
-// handle error msg
-void error_msg(char error_type,int line_num,const char * format_msg, ...);
-
 #endif

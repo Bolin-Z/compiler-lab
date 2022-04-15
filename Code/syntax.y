@@ -1,6 +1,6 @@
 %{
     #include "lex.yy.c"
-    #include "decls.h"
+    #include "error.h"
     #include "defs.h"
     #include "cst.h"
 
@@ -60,6 +60,7 @@ ExtDefList : ExtDef ExtDefList { $$ = creat_node(SYM(ExtDefList),NT_NODE,@$.firs
 ExtDef : Specifier ExtDecList SEMI { $$ = creat_node(SYM(ExtDef),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
     | Specifier SEMI { $$ = creat_node(SYM(ExtDef),NT_NODE,@$.first_line,NULL); add_child($$,2,$1,$2);}
     | Specifier FunDec CompSt { $$ = creat_node(SYM(ExtDef),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
+    | Specifier FunDec SEMI { $$ = creat_node(SYM(ExtDef),NT_NODE,@$.first_line,NULL); add_child($$,3,$1,$2,$3);}
     /* error recovery*/
     | Specifier ExtDecList error { $$ = NULL; destory_tree($1); destory_tree($2);}
     | Specifier error SEMI { $$ = NULL; destory_tree($1); destory_node($3);}

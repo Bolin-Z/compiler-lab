@@ -2,10 +2,12 @@
 #include<stdlib.h>
 #include "syntax.tab.h"
 #include"decls.h"
+#include"error.h"
 #include"cst.h"
+#include"semantic.h"
 
 extern void yyrestart(FILE*);
-bool has_error;
+extern bool has_error;
 struct CST_node * cst_root;
 
 int main(int argc,char* argv[]){
@@ -26,12 +28,24 @@ int main(int argc,char* argv[]){
     yyparse();
     fclose(fp);
     fp = NULL;
+ /* Project 1  
     if(has_error == false){
         if(cst_root != NULL){
             print_CST(cst_root,0);
         }
         destory_tree(cst_root);
     }
+*/
+
+/* Project 2 */
+    if(!has_error){
+        SemanticAnalysis(cst_root);
+    }
+
+    if(!has_error){
+        destory_tree(cst_root);
+    }
+
     cst_root = NULL;
     return 0;
 }

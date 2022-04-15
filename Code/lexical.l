@@ -1,6 +1,6 @@
 %{  
     #include "syntax.tab.h"
-    #include "decls.h"
+    #include "error.h"
 	#include "defs.h"
     #include <stdio.h>
     #include "cst.h"

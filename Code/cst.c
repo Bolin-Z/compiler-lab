@@ -1,31 +1,5 @@
 #include"cst.h"
 
-/* non-terminal node */
-
-struct CST_int_node{
-    int compact_type;
-    long intval;
-};
-
-struct CST_float_node{
-    int compact_type;
-    float floatval;
-};
-
-struct CST_id_node{
-    int compact_type;
-    char * ID;
-};
-
-struct CST_mul_node{
-    int compact_type;
-    int tktype; 
-};
-
-struct CST_uniq_node{
-    int compact_type;
-};
-
 /* function */
 
 int set_compact_type(int sym_type,int node_type){
