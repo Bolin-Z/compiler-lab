@@ -28,7 +28,7 @@ int main(int argc,char* argv[]){
     yyparse();
     fclose(fp);
     fp = NULL;
- /* Project 1  
+/* Project 1  
     if(has_error == false){
         if(cst_root != NULL){
             print_CST(cst_root,0);
@@ -40,9 +40,6 @@ int main(int argc,char* argv[]){
 /* Project 2 */
     if(!has_error){
         SemanticAnalysis(cst_root);
-    }
-
-    if(!has_error){
         destory_tree(cst_root);
     }
 
