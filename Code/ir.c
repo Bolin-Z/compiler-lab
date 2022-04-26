@@ -92,7 +92,7 @@ operand * creatOperand(irSystem * sys, int operandClass, ...){
             newOperand->info.integerVal = va_arg(ap,int);
         }break;
         case IR(FLOAT) : {
-            newOperand->info.floatVal = va_arg(ap,float);
+            newOperand->info.floatVal = (float)(va_arg(ap,double));
         } break;
         case IR(LABEL) : {
             newOperand->info.labelTag = sys->counter.label;
@@ -102,7 +102,7 @@ operand * creatOperand(irSystem * sys, int operandClass, ...){
             newOperand->info.sizeVal = va_arg(ap,int);
         }
         case IR(FUN) : {
-            bool isMain = va_arg(ap,bool);
+            bool isMain = (bool)(va_arg(ap,int));
             if(isMain) newOperand->info.funTag = 0;
             else {
                 newOperand->info.funTag = sys->counter.function;
