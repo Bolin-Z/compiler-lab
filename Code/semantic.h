@@ -7,8 +7,9 @@
 #include "symtab.h"
 #include "typesys.h"
 #include "error.h"
+#include "ir.h"
 
-void SemanticAnalysis(struct CST_node* root);
+void SemanticAnalysis(struct CST_node* root, irSystem * irSys);
 
 
 #endif

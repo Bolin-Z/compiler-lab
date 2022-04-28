@@ -1,6 +1,6 @@
 #include "semantic.h"
 
-#define SA(RETURN,NAME,...) RETURN SemanticAnalysis##NAME (struct CST_node* n, SymbolTable * symtab,##__VA_ARGS__)
+#define SA(RETURN,NAME,...) RETURN SemanticAnalysis##NAME (struct CST_node* n, SymbolTable * symtab, irSystem * irSys,##__VA_ARGS__)
 SA(void, Program);
 SA(void, ExtDefList);
 SA(void, ExtDef);
@@ -14,11 +14,11 @@ SA(void, StmtList, TypeDescriptor * returntype);
 SA(void, Stmt, TypeDescriptor * returntype); // Working ON
 
 /* Wrap-up function of semantic analysis stage */
-void SemanticAnalysis(struct CST_node* root){
+void SemanticAnalysis(struct CST_node* root, irSystem * irSys){
     CreatTypeSystem();
     SymbolTable * symtable = CreatSymbolTable();
 
-    SemanticAnalysisProgram(root,symtable);
+    SemanticAnalysisProgram(root,symtable,irSys);
     OutputSemanticErrorMessage();
 
     DestorySymbolTable(symtable);
@@ -28,14 +28,14 @@ void SemanticAnalysis(struct CST_node* root){
 /* Program := ExtDefList */
 SA(void, Program){
     OpenScope(symtab,"Global_Scope");
-    SemanticAnalysisExtDefList(n->child_list[0],symtab);
+    SemanticAnalysisExtDefList(n->child_list[0],symtab,irSys);
     CloseScope(symtab);
 }
 
 SA(void,ExtDefList){
     struct CST_node * curExtDefList = n;
     while(curExtDefList->child_cnt != 0){
-        SemanticAnalysisExtDef(curExtDefList->child_list[0],symtab);
+        SemanticAnalysisExtDef(curExtDefList->child_list[0],symtab,irSys);
         curExtDefList = curExtDefList->child_list[1];
     }
 }
@@ -55,10 +55,10 @@ SA(void, ExtDef){
         case 1 : /* Specifier ExtDecList SEMI */
             {
                 /* basetype == BasicError() is acceptable, however BasicTypeError will be assigned to IDs. */
-                TypeDescriptor * basetype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
+                TypeDescriptor * basetype = SemanticAnalysisSpecifier(n->child_list[0],symtab,irSys);
                 struct CST_node * curExtDecList = n->child_list[1];
                 while(true){
-                    SemanticAnalysisVarDec(curExtDecList->child_list[0],symtab,basetype,false);
+                    SemanticAnalysisVarDec(curExtDecList->child_list[0],symtab,irSys,basetype,false);
                     if(curExtDecList->child_cnt == 1) break;
                     else curExtDecList = curExtDecList->child_list[2];
                 }
@@ -66,23 +66,23 @@ SA(void, ExtDef){
             }
         case 2 : /* Specifier SEMI */
             {
-                SemanticAnalysisSpecifier(n->child_list[0],symtab);
+                SemanticAnalysisSpecifier(n->child_list[0],symtab,irSys);
                 break;
             }
         case 3 : /* Specifier FunDec CompSt */
             {
-                TypeDescriptor * rttype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
-                Symbol * newfun = SemanticAnalysisFunDec(n->child_list[1],symtab,rttype,true);
+                TypeDescriptor * rttype = SemanticAnalysisSpecifier(n->child_list[0],symtab,irSys);
+                Symbol * newfun = SemanticAnalysisFunDec(n->child_list[1],symtab,irSys,rttype,true);
                 /* Semantic Analysis CompSt */
-                SemanticAnalysisDefList(n->child_list[2]->child_list[1], symtab, false);
-                SemanticAnalysisStmtList(n->child_list[2]->child_list[2], symtab, newfun->attribute.IdType);
+                SemanticAnalysisDefList(n->child_list[2]->child_list[1],symtab,irSys,false);
+                SemanticAnalysisStmtList(n->child_list[2]->child_list[2],symtab,irSys,newfun->attribute.IdType);
                 CloseScope(symtab);
                 break;
             }
         case 4 : /* Specifier FunDec SEMI */
             {
-                TypeDescriptor * rttype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
-                SemanticAnalysisFunDec(n->child_list[1],symtab,rttype,false);
+                TypeDescriptor * rttype = SemanticAnalysisSpecifier(n->child_list[0],symtab,irSys);
+                SemanticAnalysisFunDec(n->child_list[1],symtab,irSys,rttype,false);
                 break;
             }
         default : /* error */
@@ -140,7 +140,7 @@ SA(TypeDescriptor*, Specifier){
                             }
                             /* Construct a structure TypeDescriptor */
                             Scope * newscope = OpenScope(symtab,"Struct_Field");
-                            SemanticAnalysisDefList(deflist,symtab,true);
+                            SemanticAnalysisDefList(deflist,symtab,irSys,true);
                             /* Construct FieldList */
                             FieldList * head = NULL;
                             FieldList * pre = NULL;
@@ -172,7 +172,7 @@ SA(TypeDescriptor*, Specifier){
 SA(void, DefList, bool fields){
     struct CST_node * curDefList = n;
     while(curDefList->child_cnt != 0){
-        SemanticAnalysisDef(curDefList->child_list[0],symtab, fields);
+        SemanticAnalysisDef(curDefList->child_list[0],symtab,irSys,fields);
         curDefList = curDefList->child_list[1];
     }
 }
@@ -180,15 +180,15 @@ SA(void, DefList, bool fields){
 /* Def := Specifier DecList SEMI */
 SA(void, Def, bool field){
     /* basetype == BasicError() is acceptable, however BasicTypeError will be assigned to IDs. */
-    TypeDescriptor * basetype = SemanticAnalysisSpecifier(n->child_list[0],symtab);
+    TypeDescriptor * basetype = SemanticAnalysisSpecifier(n->child_list[0],symtab,irSys);
     struct CST_node * curDecList = n->child_list[1];
     while(true){
         struct CST_node * curDec = curDecList->child_list[0];
         struct CST_node * curVarDec = curDec->child_list[0];
-        Symbol * newsymbol = SemanticAnalysisVarDec(curVarDec,symtab,basetype,field);
+        Symbol * newsymbol = SemanticAnalysisVarDec(curVarDec,symtab,irSys,basetype,field);
         if(curDec->child_cnt == 3){
             /* VarDec ASSIGNOP Exp */
-            TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab,false);
+            TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab,irSys,false);
             if(field){
                 /* Initialization of field. */
                 ReportSemanticError(curDec->lineno,15,NULL);
@@ -277,8 +277,8 @@ SA(Symbol*, FunDec, TypeDescriptor * returntype, bool definition){
             struct CST_node * curParamDec = curVarList->child_list[0];
             struct CST_node * curSpecifier = curParamDec->child_list[0];
             struct CST_node * curVarDec = curParamDec->child_list[1];
-            TypeDescriptor * basetype = SemanticAnalysisSpecifier(curSpecifier,symtab);
-            SemanticAnalysisVarDec(curVarDec,symtab,basetype,false);
+            TypeDescriptor * basetype = SemanticAnalysisSpecifier(curSpecifier,symtab,irSys);
+            SemanticAnalysisVarDec(curVarDec,symtab,irSys,basetype,false);
             newArgc += 1;
             if(curVarList->child_cnt == 1) break;
             else curVarList = curVarList->child_list[2];
@@ -365,8 +365,8 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
     switch(Production){
         case 1 : /* Exp ASSIGNOP Exp */
             {
-                TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0], symtab, true);
-                TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2], symtab, LeftHand);
+                TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,true);
+                TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,irSys,LeftHand);
                 if(IsErrorType(lexp) || IsErrorType(rexp)){
                     /* lexp or rexp contains error */
                     return BasicError();
@@ -387,8 +387,8 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
-                    TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,false);
-                    TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,false);
+                    TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,false);
+                    TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false);
                     if(IsErrorType(lexp) || IsErrorType(rexp)){
                         /* lexp or rexp contains error */
                         return BasicError();
@@ -415,8 +415,8 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
-                    TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,false);
-                    TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,false);
+                    TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,false);
+                    TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false);
                     if(IsErrorType(lexp) || IsErrorType(rexp)){
                         return BasicError();
                     }else{
@@ -449,8 +449,8 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
-                    TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,false);
-                    TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,false);
+                    TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,false);
+                    TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false);
                     if(IsErrorType(lexp) || IsErrorType(rexp)){
                         return BasicError();
                     }else{
@@ -472,7 +472,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                 }
             }
         case 9 : /* LP Exp RP */
-            return SemanticAnalysisExp(n->child_list[1],symtab,LeftHand);
+            return SemanticAnalysisExp(n->child_list[1],symtab,irSys,LeftHand);
         case 10 : /* MINUS Exp */
             {
                 if(LeftHand){
@@ -480,7 +480,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
-                    TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[1],symtab,false);
+                    TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[1],symtab,irSys,false);
                     if(IsEqualType(exp,BasicInt()) || IsEqualType(exp,BasicFloat()) || IsErrorType(exp)){
                         return exp;
                     }else{
@@ -497,7 +497,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                     ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
-                    TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[1],symtab,false);
+                    TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[1],symtab,irSys,false);
                     if(IsEqualType(exp,BasicInt()) || IsErrorType(exp)){
                         return exp;
                     }else{
@@ -538,7 +538,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
                         }
                         for(int i = 0;i < expectargnum;i++){
                             struct CST_node * curExp = curArg->child_list[0];
-                            TypeDescriptor * curExptype = SemanticAnalysisExp(curExp,symtab,false);
+                            TypeDescriptor * curExptype = SemanticAnalysisExp(curExp,symtab,irSys,false);
                             TypeDescriptor * expecttype = fun->attribute.Info.Func.ArgTypeList[i];
                             if(IsErrorType(curExptype)){
                                 return BasicError();
@@ -591,8 +591,8 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
             }
         case 14 : /* Exp LB Exp RB */
             {
-                TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,LeftHand);
-                TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,false);
+                TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,LeftHand);
+                TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false);
                 bool rterror = false;
                 if(IsErrorType(lexp)){
                     rterror = true;
@@ -616,7 +616,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
             }
         case 15 : /* Exp DOT ID */
             {
-                TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[0],symtab,LeftHand);
+                TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,LeftHand);
                 if(IsErrorType(exp)){
                     return BasicError();
                 }else{
@@ -685,7 +685,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand){
 SA(void, StmtList, TypeDescriptor * returntype){
     struct CST_node * curStmtList = n;
     while(curStmtList->child_cnt != 0){
-        SemanticAnalysisStmt(curStmtList->child_list[0],symtab,returntype);
+        SemanticAnalysisStmt(curStmtList->child_list[0],symtab,irSys,returntype);
         curStmtList = curStmtList->child_list[1];
     }
 }
@@ -710,20 +710,20 @@ SA(void, Stmt, TypeDescriptor * returntype){
     switch(Production){
         case 1 : /* Exp SEMI */
             {
-                SemanticAnalysisExp(n->child_list[0],symtab,false);
+                SemanticAnalysisExp(n->child_list[0],symtab,irSys,false);
                 break;
             }
         case 2 : /* CompSt */
             {
                 OpenScope(symtab,"CompSt");
-                SemanticAnalysisDefList(n->child_list[0]->child_list[1],symtab,false);
-                SemanticAnalysisStmtList(n->child_list[0]->child_list[2],symtab,returntype);
+                SemanticAnalysisDefList(n->child_list[0]->child_list[1],symtab,irSys,false);
+                SemanticAnalysisStmtList(n->child_list[0]->child_list[2],symtab,irSys,returntype);
                 CloseScope(symtab);
                 break;
             }
         case 3 : /* RETURN Exp SEMI */
             {
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[1],symtab,false);
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[1],symtab,irSys,false);
                 if(!IsEqualType(exptype,returntype))
                     /* Type mismatched for return type. */
                     ReportSemanticError(n->child_list[1]->lineno,8,NULL);
@@ -731,33 +731,33 @@ SA(void, Stmt, TypeDescriptor * returntype){
             }
         case 4 : /* IF LP Exp RP Stmt */
             {
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,false);
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false);
                 if(!IsEqualType(exptype,BasicInt())){
                     /* Type mismatched for operands. */
                     ReportSemanticError(n->child_list[2]->lineno,7,NULL);
                 }
-                SemanticAnalysisStmt(n->child_list[4],symtab,returntype);
+                SemanticAnalysisStmt(n->child_list[4],symtab,irSys,returntype);
                 break;
             }
         case 5 : /* IF LP Exp RP Stmt ELSE Stmt */
             {
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,false);
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false);
                 if(!IsEqualType(exptype,BasicInt())){
                     /* Type mismatched for operands. */
                     ReportSemanticError(n->child_list[2]->lineno,7,NULL);
                 }
-                SemanticAnalysisStmt(n->child_list[4],symtab,returntype);
-                SemanticAnalysisStmt(n->child_list[6],symtab,returntype);
+                SemanticAnalysisStmt(n->child_list[4],symtab,irSys,returntype);
+                SemanticAnalysisStmt(n->child_list[6],symtab,irSys,returntype);
                 break;
             }
         case 6 : /* WHILE LP Exp RP Stmt */
             {
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,false);
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false);
                 if(!IsEqualType(exptype,BasicInt())){
                     /* Type mismatched for operands. */
                     ReportSemanticError(n->child_list[2]->lineno,7,NULL);
                 }
-                SemanticAnalysisStmt(n->child_list[4],symtab,returntype);
+                SemanticAnalysisStmt(n->child_list[4],symtab,irSys,returntype);
                 break;
             }
         default : break;

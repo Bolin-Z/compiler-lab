@@ -41,7 +41,7 @@ int main(int argc,char* argv[]){
     irSystem * irSys = NULL;
     if(!has_error){
         irSys = creatIrSystem();
-        SemanticAnalysis(cst_root);
+        SemanticAnalysis(cst_root,irSys);
         destory_tree(cst_root);
     }
 
