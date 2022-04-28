@@ -28,6 +28,24 @@ void SemanticAnalysis(struct CST_node* root, irSystem * irSys){
 /* Program := ExtDefList */
 SA(void, Program){
     OpenScope(symtab,"Global_Scope");
+    
+    /* Insert read() and write() */
+    Symbol * readFun = Insert(symtab,"read");
+    readFun->attribute.IdClass = FUNCTION;
+    readFun->attribute.IdType = BasicInt();
+    readFun->attribute.Info.Func.Argc = 0;
+    readFun->attribute.Info.Func.ArgTypeList = NULL;
+    readFun->attribute.Info.Func.defined = UpdateFunctionState(0,"read",true);
+    readFun->attribute.irOperand = NULL;
+    Symbol * writeFun = Insert(symtab,"write");
+    writeFun->attribute.IdClass = FUNCTION;
+    writeFun->attribute.IdType = BasicInt();
+    writeFun->attribute.Info.Func.Argc = 1;
+    writeFun->attribute.Info.Func.ArgTypeList = (TypeDescriptor**)malloc(sizeof(TypeDescriptor*));
+    writeFun->attribute.Info.Func.ArgTypeList[0] = BasicInt();
+    writeFun->attribute.Info.Func.defined = UpdateFunctionState(0,"write",true);
+    writeFun->attribute.irOperand = NULL;
+
     SemanticAnalysisExtDefList(n->child_list[0],symtab,irSys);
     CloseScope(symtab);
 }
