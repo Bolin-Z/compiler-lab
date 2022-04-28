@@ -104,7 +104,7 @@ operand * creatOperand(irSystem * sys, int operandClass, ...){
         } break;
         case IR(SIZE) : {
             newOperand->info.sizeVal = va_arg(ap,int);
-        }
+        } break;
         case IR(FUN) : {
             bool isMain = (bool)(va_arg(ap,int));
             if(isMain) newOperand->info.funTag = 0;
