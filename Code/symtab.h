@@ -7,6 +7,7 @@
 #include<string.h>
 #include"typesys.h"
 #include"rastack.h"
+#include"ir.h"
 
 /* Macro related to hashlist */
 # define HASHTABLESIZE 1024 // 0x400
@@ -22,6 +23,7 @@ typedef struct SymbolHashTable SymbolHashTable;
 struct Attribute{
     enum {NONE,VARIABLE,FUNCTION,TYPENAME} IdClass;
     TypeDescriptor * IdType;
+    operand * irOperand;
     union{
         /* IdClass == VARIABLE */
         /* IdType stores the type of id */
