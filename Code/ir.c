@@ -24,7 +24,7 @@ irSystem * creatIrSystem(){
 }
 
 /* Delete the ir translation system */
-void * destoryIrSystem(irSystem * sys){
+void destoryIrSystem(irSystem * sys){
     if(sys){
         destoryOperandPoolList(sys->poolList);
         destoryIrCodeList(sys->codeListHead);
@@ -182,7 +182,7 @@ irCode * generateCode(irSystem * sys, int instruction, operand * result, operand
 }
 
 /* Output all IrCode to file */
-void * fprintfIrCode(FILE * f, irSystem * sys){
+void fprintfIrCode(FILE * f, irSystem * sys){
     irCode * curCode = sys->codeListHead;
     while(curCode){
         quadruple * c = & curCode->code;

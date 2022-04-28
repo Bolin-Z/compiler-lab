@@ -85,10 +85,10 @@ typedef struct irSystem {
 /* Public interface */
 
 irSystem * creatIrSystem();
-void * destoryIrSystem(irSystem * sys);
+void destoryIrSystem(irSystem * sys);
 operand * creatOperand(irSystem * sys, int operandClass, ...);
 operand * copyOperand(irSystem * sys, operand * src);
 irCode * generateCode(irSystem * sys, int instruction, operand * result, operand * arg1, operand * arg2);
-void * fprintfIrCode(FILE * f, irSystem * sys);
+void fprintfIrCode(FILE * f, irSystem * sys);
 
 #endif
