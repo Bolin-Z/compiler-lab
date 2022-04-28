@@ -16,12 +16,16 @@ typedef struct operand {
     union{
         int integerVal;
         float floatVal;
-        int variableTag, tempVarTag, labelTag, funTag;
+        int labelTag, funTag;
+        struct {
+            int Tag;
+            enum {IR(NORMAL),IR(ACCESSADDR),IR(ACCESSVAL)} modifier;
+        } variable, tempVar;
         int sizeVal;
     } info;
 } operand;
 
-#define POOLSIZE 128
+#define POOLSIZE 256
 /* Store empty operand object */
 typedef struct operandPool {
     /* Singly Linked List */
@@ -83,6 +87,7 @@ typedef struct irSystem {
 irSystem * creatIrSystem();
 void * destoryIrSystem(irSystem * sys);
 operand * creatOperand(irSystem * sys, int operandClass, ...);
+operand * copyOperand(irSystem * sys, operand * src);
 irCode * generateCode(irSystem * sys, int instruction, operand * result, operand * arg1, operand * arg2);
 void * fprintfIrCode(FILE * f, irSystem * sys);
 

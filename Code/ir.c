@@ -25,9 +25,11 @@ irSystem * creatIrSystem(){
 
 /* Delete the ir translation system */
 void * destoryIrSystem(irSystem * sys){
-    destoryOperandPoolList(sys->poolList);
-    destoryIrCodeList(sys->codeListHead);
-    free(sys);
+    if(sys){
+        destoryOperandPoolList(sys->poolList);
+        destoryIrCodeList(sys->codeListHead);
+        free(sys);
+    }
 }
 
 /* Add a new operandPool to poolList and return the new list */
@@ -62,11 +64,11 @@ void destoryIrCodeList(irCode * codeListHead){
 
 /* 
     Creat a new operand and return a pointer to it
-    Immediate int operand : creatOperand(irSystem * sys, int operandClass, int val)
-    Immediate float operand : creatOperand(irSystem * sys, int operandClass, float val)
+    Immediate int    : creatOperand(irSystem * sys, int operandClass, int val)
+    Immediate float  : creatOperand(irSystem * sys, int operandClass, float val)
     Funciton operand : creatOperand(irSystem * sys, int operandClass, bool isMain)
-    Size operand : creatOperand(irSystem * sys, int operandClass, int val)
-    Other operand : creatOperand(irSystem * sys, int operandClass)
+    Size             : creatOperand(irSystem * sys, int operandClass, int size)
+    [Temp]Variable   : creatOperand(irSystem * sys, int operandClass, int modifier)
 */
 operand * creatOperand(irSystem * sys, int operandClass, ...){
     if(sys->poolList->curEmpty == POOLSIZE){
@@ -81,12 +83,14 @@ operand * creatOperand(irSystem * sys, int operandClass, ...){
     va_start(ap,operandClass);
     switch(operandClass){
         case IR(VAR) : {
-            newOperand->info.variableTag = sys->counter.variable;
+            newOperand->info.variable.Tag = sys->counter.variable;
             sys->counter.variable += 1;
+            newOperand->info.variable.modifier = va_arg(ap,int);
         } break;
         case IR(TEMP) : {
-            newOperand->info.tempVarTag = sys->counter.tempVar;
+            newOperand->info.tempVar.Tag = sys->counter.tempVar;
             sys->counter.tempVar += 1;
+            newOperand->info.tempVar.modifier = va_arg(ap,int);
         } break;
         case IR(INT) : {
             newOperand->info.integerVal = va_arg(ap,int);
@@ -118,6 +122,46 @@ operand * creatOperand(irSystem * sys, int operandClass, ...){
     va_end(ap);
 
     return newOperand;
+}
+
+/*
+    Creat a new operand same as src and return a pointer to it
+*/
+operand * copyOperand(irSystem * sys, operand * src){
+    operand * dst = NULL;
+    if(src){
+        if(sys->poolList->curEmpty == POOLSIZE){
+            sys->poolList = creatOperandPool(sys->poolList);
+            if(sys->poolList->curEmpty != 0) return NULL;
+        }
+        dst = &sys->poolList->operands[sys->poolList->curEmpty];
+        sys->poolList->curEmpty += 1;
+        
+        dst->operandClass = src->operandClass;
+        switch(src->operandClass){
+            case IR(VAR) : {
+                dst->info.variable.Tag = src->info.variable.Tag;
+                dst->info.variable.modifier = src->info.variable.modifier;
+                break;
+            }
+            case IR(TEMP) : {
+                dst->info.tempVar.Tag = src->info.tempVar.Tag;
+                dst->info.tempVar.modifier = src->info.tempVar.modifier;
+                break;
+            }
+            case IR(INT)   : dst->info.integerVal = src->info.integerVal; break;
+            case IR(FLOAT) : dst->info.floatVal = src->info.floatVal; break;
+            case IR(LABEL) : dst->info.labelTag = src->info.labelTag; break;
+            case IR(SIZE)  : dst->info.sizeVal = src->info.sizeVal; break;
+            case IR(FUN)   : dst->info.funTag = src->info.funTag; break;        
+            default : {
+                /* Invalid operandclass */
+                dst = NULL;
+                sys->poolList->curEmpty -= 1;
+            }
+        }
+    }
+    return dst;
 }
 
 irCode * generateCode(irSystem * sys, int instruction, operand * result, operand * arg1, operand * arg2){
@@ -180,8 +224,24 @@ void * fprintfIrCode(FILE * f, irSystem * sys){
 void fprintfOperand(FILE * f, operand * op){
     if(op){
         switch(op->operandClass){
-            case IR(VAR)   : fprintf(f,"v%d",op->info.variableTag); break;
-            case IR(TEMP)  : fprintf(f,"t%d",op->info.tempVarTag); break;
+            case IR(VAR)   : {
+                switch(op->info.variable.modifier){
+                    case IR(ACCESSADDR) : fprintf(f,"&"); break;
+                    case IR(ACCESSVAL)  : fprintf(f,"*"); break;
+                    default : break;
+                }
+                fprintf(f,"v%d",op->info.variable.Tag); 
+                break;
+            }
+            case IR(TEMP)  : {
+                switch(op->info.tempVar.modifier){
+                    case IR(ACCESSADDR) : fprintf(f,"&"); break;
+                    case IR(ACCESSVAL)  : fprintf(f,"*"); break;
+                    default : break;
+                }
+                fprintf(f,"t%d",op->info.tempVar.Tag); 
+                break;
+            }
             case IR(INT)   : fprintf(f,"#%d",op->info.integerVal); break;
             case IR(FLOAT) : fprintf(f,"#%f",op->info.floatVal); break;
             case IR(LABEL) : fprintf(f,"label%d",op->info.labelTag); break;
