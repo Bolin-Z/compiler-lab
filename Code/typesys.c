@@ -26,11 +26,14 @@ void CreatTypeSystem(){
     BasicTypeInt = CreatTypeDescriptor();
     BasicTypeInt->TypeClass = BASIC;
     BasicTypeInt->Basic = BASICINT;
+    BasicTypeInt->typeWidth = 4;
     BasicTypeFloat = CreatTypeDescriptor();
     BasicTypeFloat->TypeClass = BASIC;
     BasicTypeFloat->Basic = BASICFLOAT;
+    BasicTypeFloat->typeWidth = 4;
     BasicTypeError = CreatTypeDescriptor();
     BasicTypeError->TypeClass = ERROR;
+    BasicTypeError->typeWidth = 0;
 }
 
 /* Destory basic type objects. */
@@ -78,6 +81,7 @@ TypeDescriptor * CopyTypeDescriptor(TypeDescriptor * src){
                 dst = CreatTypeDescriptor();
                 if(dst){
                     dst->TypeClass = ARRAY;
+                    dst->typeWidth = src->typeWidth;
                     dst->Array.size = src->Array.size;
                     dst->Array.elem = CopyTypeDescriptor(src->Array.elem);
                     if(!dst->Array.elem){
@@ -90,6 +94,7 @@ TypeDescriptor * CopyTypeDescriptor(TypeDescriptor * src){
                 dst = CreatTypeDescriptor();
                 if(dst){
                     dst->TypeClass = STRUCTURE;
+                    dst->typeWidth = src->typeWidth;
                     dst->Structure = CopyFieldList(src->Structure);
                     if(!dst->Structure){
                         DestoryTypeDescriptor(dst);

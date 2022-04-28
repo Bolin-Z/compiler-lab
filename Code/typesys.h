@@ -14,6 +14,8 @@ typedef struct FieldList FieldList;
 /* Object that describe type. */
 struct TypeDescriptor{
     enum {ERROR, BASIC, ARRAY, STRUCTURE} TypeClass;
+    /* Width of type (byte) */
+    int typeWidth;
     union{
         /* TypeClass == BASIC */
         enum {BASICINT,BASICFLOAT} Basic;
