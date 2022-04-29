@@ -158,6 +158,7 @@ SA(TypeDescriptor*, Specifier){
                             }
                             /* Construct a structure TypeDescriptor */
                             Scope * newscope = OpenScope(symtab,"Struct_Field");
+                            int structTypeWidth = 0;
                             SemanticAnalysisDefList(deflist,symtab,irSys,true);
                             /* Construct FieldList */
                             FieldList * head = NULL;
@@ -168,6 +169,7 @@ SA(TypeDescriptor*, Specifier){
                                     FieldList * f = CreatField();
                                     f->FieldName = tempsym->id;
                                     f->FieldType = CopyTypeDescriptor(tempsym->attribute.IdType);
+                                    structTypeWidth += f->FieldType->typeWidth;
                                     if(!head) head = f;
                                     if(pre) pre->NextField = f;
                                     pre = f;
@@ -175,6 +177,7 @@ SA(TypeDescriptor*, Specifier){
                             }
                             CloseScope(symtab);
                             TypeDescriptor * newsttype = CreatStructureDescriptor(head,false);
+                            newsttype->typeWidth = structTypeWidth;
                             if(newst) newst->attribute.IdType = newsttype;
                             return newsttype;
                         }
@@ -228,7 +231,9 @@ SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field){
     TypeDescriptor * pretype = basetype;
     while(curVarDec->child_cnt != 1){
         int arsize = ((struct CST_int_node *)(curVarDec->child_list[2]))->intval;
+        int elemTypeSize = pretype->typeWidth;
         pretype = CreatArrayDescriptor(pretype,arsize,false);
+        pretype->typeWidth = elemTypeSize * arsize;
         curVarDec = curVarDec->child_list[0];
     }
     char * varname = ((struct CST_id_node*)(curVarDec->child_list[0]))->ID;
@@ -253,6 +258,15 @@ SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field){
     Symbol * newsymbol = Insert(symtab,varname);
     newsymbol->attribute.IdClass = VARIABLE;
     newsymbol->attribute.IdType = pretype;
+    if(!field){
+        /* Assume that no global variable exists */
+        newsymbol->attribute.irOperand = creatOperand(irSys,IR(VAR),IR(NORMAL));
+        if(newsymbol->attribute.IdType->TypeClass == ARRAY || newsymbol->attribute.IdType->TypeClass == STRUCTURE){
+            operand * sizeOfType = creatOperand(irSys,IR(SIZE),newsymbol->attribute.IdType->typeWidth);
+            /* DEC x size */
+            generateCode(irSys,IS(DEC),newsymbol->attribute.irOperand,sizeOfType,NULL);
+        }
+    }
     return newsymbol;
 }
 
