@@ -12,7 +12,7 @@
 #define IS(X) INSTRUCTION_##X
 
 typedef struct operand {
-    enum {IR(VAR), IR(TEMP), IR(INT), IR(FLOAT), IR(LABEL), IR(SIZE), IR(FUN)} operandClass;
+    enum {IR(VAR), IR(TEMP), IR(PARAM), IR(INT), IR(FLOAT), IR(LABEL), IR(SIZE), IR(FUN)} operandClass;
     union{
         int integerVal;
         float floatVal;
@@ -20,7 +20,7 @@ typedef struct operand {
         struct {
             int Tag;
             enum {IR(NORMAL),IR(ACCESSADDR),IR(ACCESSVAL)} modifier;
-        } variable, tempVar;
+        } variable, tempVar, parameter;
         int sizeVal;
     } info;
 } operand;
@@ -78,7 +78,7 @@ typedef struct irSystem {
     operandPool *poolList;
     struct {
         int function; // f0 = 'main'
-        int variable, tempVar, label;
+        int variable, tempVar, parameter, label;
     } counter;
 } irSystem;
 

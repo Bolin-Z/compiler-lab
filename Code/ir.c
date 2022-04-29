@@ -27,6 +27,7 @@ irSystem * creatIrSystem(){
         sys->counter.function = 1;
         sys->counter.variable = 0;
         sys->counter.tempVar = 0;
+        sys->counter.parameter = 0;
         sys->counter.label = 0;
         zeroIrOperand = creatOperand(sys,IR(INT),0);
         oneIROperand = creatOperand(sys,IR(INT),1);
@@ -76,12 +77,12 @@ void destoryIrCodeList(irCode * codeListHead){
 
 /* 
     Creat a new operand and return a pointer to it
-    Immediate int    : creatOperand(irSystem * sys, IR(INT), int val)
-    Immediate float  : creatOperand(irSystem * sys, IR(FLOAT), float val)
-    Funciton operand : creatOperand(irSystem * sys, IR(FUN), bool isMain)
-    Label operand    : creatOperand(irSystem * sys, IR(LABEL))
-    Size             : creatOperand(irSystem * sys, IR(SIZE), int size)
-    Temp | Variable  : creatOperand(irSystem * sys, IR(TEMP) | IR(VAR), int modifier) 
+    Immediate int               : creatOperand(irSystem * sys, IR(INT), int val)
+    Immediate float             : creatOperand(irSystem * sys, IR(FLOAT), float val)
+    Funciton operand            : creatOperand(irSystem * sys, IR(FUN), bool isMain)
+    Label operand               : creatOperand(irSystem * sys, IR(LABEL))
+    Size                        : creatOperand(irSystem * sys, IR(SIZE), int size)
+    Variable | Temp | Parameter : creatOperand(irSystem * sys, IR(TEMP) | IR(VAR) | IR(PARAM), int modifier) 
 */
 operand * creatOperand(irSystem * sys, int operandClass, ...){
     if(sys->poolList->curEmpty == POOLSIZE){
@@ -105,9 +106,14 @@ operand * creatOperand(irSystem * sys, int operandClass, ...){
             sys->counter.tempVar += 1;
             newOperand->info.tempVar.modifier = va_arg(ap,int);
         } break;
+        case IR(PARAM) : {
+            newOperand->info.parameter.Tag = sys->counter.parameter;
+            sys->counter.parameter += 1;
+            newOperand->info.parameter.modifier = va_arg(ap,int);
+        }
         case IR(INT) : {
             newOperand->info.integerVal = va_arg(ap,int);
-        }break;
+        } break;
         case IR(FLOAT) : {
             newOperand->info.floatVal = (float)(va_arg(ap,double));
         } break;
@@ -160,6 +166,11 @@ operand * copyOperand(irSystem * sys, operand * src){
             case IR(TEMP) : {
                 dst->info.tempVar.Tag = src->info.tempVar.Tag;
                 dst->info.tempVar.modifier = src->info.tempVar.modifier;
+                break;
+            }
+            case IR(PARAM) : {
+                dst->info.parameter.Tag = src->info.parameter.Tag;
+                dst->info.parameter.modifier = src->info.parameter.modifier;
                 break;
             }
             case IR(INT)   : dst->info.integerVal = src->info.integerVal; break;
@@ -253,6 +264,15 @@ void fprintfOperand(FILE * f, operand * op){
                     default : break;
                 }
                 fprintf(f,"t%d",op->info.tempVar.Tag); 
+                break;
+            }
+            case IR(PARAM) : {
+                switch(op->info.parameter.modifier){
+                    case IR(ACCESSADDR) : fprintf(f,"&"); break;
+                    case IR(ACCESSVAL)  : fprintf(f,"*"); break;
+                    default : break;
+                }
+                fprintf(f,"p%d",op->info.parameter.Tag);
                 break;
             }
             case IR(INT)   : fprintf(f,"#%d",op->info.integerVal); break;
