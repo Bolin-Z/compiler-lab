@@ -13,9 +13,9 @@
 //                             +---+                              +---+
 
 
-TypeDescriptor * BasicTypeInt;
-TypeDescriptor * BasicTypeFloat;
-TypeDescriptor * BasicTypeError;
+static TypeDescriptor * BasicTypeInt;
+static TypeDescriptor * BasicTypeFloat;
+static TypeDescriptor * BasicTypeError;
 
 TypeDescriptor * BasicInt(){return BasicTypeInt;}
 TypeDescriptor * BasicFloat(){return BasicTypeFloat;}

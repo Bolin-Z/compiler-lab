@@ -9,7 +9,7 @@ SA(void, DefList, bool fields);
 SA(void, Def, bool field);
 SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field);
 SA(Symbol*, FunDec, TypeDescriptor * returntype, bool declaration);
-SA(TypeDescriptor*, Exp, bool LeftHand);
+SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand);
 SA(void, StmtList, TypeDescriptor * returntype);
 SA(void, Stmt, TypeDescriptor * returntype); // Working ON
 
@@ -77,6 +77,8 @@ SA(void, ExtDef){
                 struct CST_node * curExtDecList = n->child_list[1];
                 while(true){
                     SemanticAnalysisVarDec(curExtDecList->child_list[0],symtab,irSys,basetype,false);
+                    /* Do not generate code for global variable */
+
                     if(curExtDecList->child_cnt == 1) break;
                     else curExtDecList = curExtDecList->child_list[2];
                 }
@@ -207,9 +209,19 @@ SA(void, Def, bool field){
         struct CST_node * curDec = curDecList->child_list[0];
         struct CST_node * curVarDec = curDec->child_list[0];
         Symbol * newsymbol = SemanticAnalysisVarDec(curVarDec,symtab,irSys,basetype,field);
+
+        /* local variable declaration starts here */
+        if(newsymbol->attribute.IdType->TypeClass == ARRAY || newsymbol->attribute.IdType->TypeClass == STRUCTURE){
+            /* allocate space for array and structure */
+            operand * sizeOfType = creatOperand(irSys,IR(SIZE),newsymbol->attribute.IdType->typeWidth);
+            /* DEC x size */
+            generateCode(irSys,IS(DEC),newsymbol->attribute.irOperand,sizeOfType,NULL);
+        }
+
         if(curDec->child_cnt == 3){
             /* VarDec ASSIGNOP Exp */
-            TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab,irSys,false);
+            operand * srcOperand = NULL;
+            TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab,irSys,false, &srcOperand);
             if(field){
                 /* Initialization of field. */
                 ReportSemanticError(curDec->lineno,15,NULL);
@@ -217,6 +229,49 @@ SA(void, Def, bool field){
                 if((!IsErrorType(exptype)) && (!IsErrorType(newsymbol->attribute.IdType)) && (!IsEqualType(newsymbol->attribute.IdType,exptype))){
                     /* Type mismatched for assignment. */
                     ReportSemanticError(curDec->lineno,5,NULL);
+                }else{
+                    /* local variable initialization starts here */
+                    if(newsymbol->attribute.IdType->TypeClass == BASIC){
+                        /* (int) := (int) | (float) := (float) */
+                        /* x := y */
+                        generateCode(irSys,IS(ASSIGN),newsymbol->attribute.irOperand,srcOperand,NULL);
+                    }else if(newsymbol->attribute.IdType->TypeClass == ARRAY || newsymbol->attribute.IdType == STRUCTURE){
+                        /* Tricky: use memory copy here */
+                        operand * sizeOfType = creatOperand(irSys,IR(INT),newsymbol->attribute.IdType->typeWidth);
+                        operand * dstAddr = copyOperand(irSys,newsymbol->attribute.irOperand);
+                        dstAddr->info.variable.modifier = IR(ACCESSADDR);
+                        operand * srcAddr = srcOperand;
+                        operand * offSet = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                        operand * dstTargetAddr = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                        operand * srcTargetAddr = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                        operand * tempVal =  creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                        operand * labelBegin = creatOperand(irSys,IR(LABEL));
+                        operand * labelEnd = creatOperand(irSys,IR(LABEL));
+                        /*
+                                offSet := #0
+                            LABEL labelBegin :
+                                IF offSet >= sizeOfType GOTO labelEnd
+                                dstTargetAddr := dstAddr + offSet
+                                srcTargetAddr := srcAddr + offSet
+                                tempVal := *srcTargetAddr
+                                *dstTargetAddr := tempval
+                                offSet := offSet + #4
+                                GOTO labelBegin
+                            LABEL labelEnd :
+                        */
+                        generateCode(irSys,IS(ASSIGN),offSet,zeroOperand(),NULL);
+                        generateCode(irSys,IS(LABEL),labelBegin,NULL,NULL);
+                        generateCode(irSys,IS(GREATEREQ),labelEnd,offSet,sizeOfType);
+                        generateCode(irSys,IS(PLUS),dstTargetAddr,dstAddr,offSet);
+                        generateCode(irSys,IS(PLUS),srcTargetAddr,srcAddr,offSet);
+                        generateCode(irSys,IS(GETVAL),tempVal,srcTargetAddr,NULL);
+                        generateCode(irSys,IS(SETVAL),dstTargetAddr,tempVal,NULL);
+                        generateCode(irSys,IS(PLUS),offSet,offSet,minTypeWidthOperand());
+                        generateCode(irSys,IS(GOTO),labelBegin,NULL,NULL);
+                        generateCode(irSys,IS(LABEL),labelEnd,NULL,NULL);
+                    }else{
+                        /* Error */
+                    }
                 }
             }
         }
@@ -258,19 +313,13 @@ SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field){
     Symbol * newsymbol = Insert(symtab,varname);
     newsymbol->attribute.IdClass = VARIABLE;
     newsymbol->attribute.IdType = pretype;
-    if(!field){
-        /* Assume that no global variable exists */
-        newsymbol->attribute.irOperand = creatOperand(irSys,IR(VAR),IR(NORMAL));
-        if(newsymbol->attribute.IdType->TypeClass == ARRAY || newsymbol->attribute.IdType->TypeClass == STRUCTURE){
-            operand * sizeOfType = creatOperand(irSys,IR(SIZE),newsymbol->attribute.IdType->typeWidth);
-            /* DEC x size */
-            generateCode(irSys,IS(DEC),newsymbol->attribute.irOperand,sizeOfType,NULL);
-        }
-    }
+    /* Assign an operand for non-field variable */
+    if(!field) newsymbol->attribute.irOperand = creatOperand(irSys,IR(VAR),IR(NORMAL));
     return newsymbol;
 }
 
 /* FunDec := ID LP RP | ID LP VarList RP */
+/* Only generate code for function definition */
 SA(Symbol*, FunDec, TypeDescriptor * returntype, bool definition){
     char * funid = ((struct CST_id_node*)(n->child_list[0]))->ID;
     Symbol * newfun = NULL;
@@ -298,6 +347,20 @@ SA(Symbol*, FunDec, TypeDescriptor * returntype, bool definition){
     newfun->attribute.IdClass = FUNCTION;
     newfun->attribute.IdType = returntype;
     newfun->attribute.Info.Func.defined = UpdateFunctionState(n->lineno,funid,definition);
+    
+    /* Assign an operand for function */
+    if(oldfun != NULL){
+        newfun->attribute.irOperand = oldfun;
+    }else{
+        /* A new function */
+        bool isMain = (strcmp(funid,"main") == 0);
+        newfun->attribute.irOperand = creatOperand(irSys,IR(FUN),isMain);
+    }
+    /* function definition starts here */
+    if(definition){
+        /* FUNCTION f : */
+        generateCode(irSys,IS(FUNCTION),newfun->attribute.irOperand,NULL,NULL);
+    }
 
     Scope * funscope = OpenScope(symtab,newfun->id);
 
@@ -310,8 +373,14 @@ SA(Symbol*, FunDec, TypeDescriptor * returntype, bool definition){
             struct CST_node * curSpecifier = curParamDec->child_list[0];
             struct CST_node * curVarDec = curParamDec->child_list[1];
             TypeDescriptor * basetype = SemanticAnalysisSpecifier(curSpecifier,symtab,irSys);
-            SemanticAnalysisVarDec(curVarDec,symtab,irSys,basetype,false);
+            Symbol * newParam = SemanticAnalysisVarDec(curVarDec,symtab,irSys,basetype,false);            
             newArgc += 1;
+            /* parameter declaration starts here */
+            if(definition){
+                /* PARAM x */
+                generateCode(irSys,IS(PARAM),newParam->attribute.irOperand,NULL,NULL);
+            }
+
             if(curVarList->child_cnt == 1) break;
             else curVarList = curVarList->child_list[2];
         }
@@ -351,7 +420,7 @@ SA(Symbol*, FunDec, TypeDescriptor * returntype, bool definition){
     Return a pointer to a TypeDescriptor that describes Exp.
     No new TypeDescriptor will be created.
 */
-SA(TypeDescriptor*, Exp, bool LeftHand){
+SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand){
     int Production;
     switch(n->child_cnt){
         case 1 :

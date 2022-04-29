@@ -7,6 +7,15 @@ void destoryOperandPoolList(operandPool * poolList);
 void destoryIrCodeList(irCode * codeListHead);
 void fprintfOperand(FILE * f, operand * op);
 
+static operand * zeroIrOperand;
+static operand * oneIROperand;
+static operand * minTypeWidthIROperand;
+
+operand * zeroOperand(){return zeroIrOperand;}
+operand * oneOperand(){return oneIROperand;}
+operand * minTypeWidthOperand(){return minTypeWidthIROperand;}
+
+
 /* Implementation */
 
 /* Creat an ir translation system */
@@ -19,6 +28,9 @@ irSystem * creatIrSystem(){
         sys->counter.variable = 0;
         sys->counter.tempVar = 0;
         sys->counter.label = 0;
+        zeroIrOperand = creatOperand(sys,IR(INT),0);
+        oneIROperand = creatOperand(sys,IR(INT),1);
+        minTypeWidthIROperand = creatOperand(sys,IR(INT),4);
     }
     return sys;
 }
@@ -64,11 +76,12 @@ void destoryIrCodeList(irCode * codeListHead){
 
 /* 
     Creat a new operand and return a pointer to it
-    Immediate int    : creatOperand(irSystem * sys, int operandClass, int val)
-    Immediate float  : creatOperand(irSystem * sys, int operandClass, float val)
-    Funciton operand : creatOperand(irSystem * sys, int operandClass, bool isMain)
-    Size             : creatOperand(irSystem * sys, int operandClass, int size)
-    [Temp]Variable   : creatOperand(irSystem * sys, int operandClass, int modifier)
+    Immediate int    : creatOperand(irSystem * sys, IR(INT), int val)
+    Immediate float  : creatOperand(irSystem * sys, IR(FLOAT), float val)
+    Funciton operand : creatOperand(irSystem * sys, IR(FUN), bool isMain)
+    Label operand    : creatOperand(irSystem * sys, IR(LABEL))
+    Size             : creatOperand(irSystem * sys, IR(SIZE), int size)
+    Temp | Variable  : creatOperand(irSystem * sys, IR(TEMP) | IR(VAR), int modifier) 
 */
 operand * creatOperand(irSystem * sys, int operandClass, ...){
     if(sys->poolList->curEmpty == POOLSIZE){

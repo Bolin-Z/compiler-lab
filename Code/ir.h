@@ -91,4 +91,9 @@ operand * copyOperand(irSystem * sys, operand * src);
 irCode * generateCode(irSystem * sys, int instruction, operand * result, operand * arg1, operand * arg2);
 void fprintfIrCode(FILE * f, irSystem * sys);
 
+/* Some frequently used operand. Do not modify. */
+operand * zeroOperand();
+operand * oneOperand();
+operand * minTypeWidthOperand();
+
 #endif
