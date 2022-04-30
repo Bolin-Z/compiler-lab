@@ -9,7 +9,7 @@ SA(void, DefList, bool fields);
 SA(void, Def, bool field);
 SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field);
 SA(Symbol*, FunDec, TypeDescriptor * returntype, bool declaration);
-SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand);
+SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * labelTrue, operand * labelFalse, bool conditionExp);
 SA(void, StmtList, TypeDescriptor * returntype);
 SA(void, Stmt, TypeDescriptor * returntype); // Working ON
 
@@ -76,8 +76,9 @@ SA(void, ExtDef){
                 TypeDescriptor * basetype = SemanticAnalysisSpecifier(n->child_list[0],symtab,irSys);
                 struct CST_node * curExtDecList = n->child_list[1];
                 while(true){
-                    SemanticAnalysisVarDec(curExtDecList->child_list[0],symtab,irSys,basetype,false);
+                    Symbol * globalVariable = SemanticAnalysisVarDec(curExtDecList->child_list[0],symtab,irSys,basetype,false);
                     /* Do not generate code for global variable */
+                    globalVariable->attribute.irOperand = NULL;
 
                     if(curExtDecList->child_cnt == 1) break;
                     else curExtDecList = curExtDecList->child_list[2];
@@ -211,6 +212,7 @@ SA(void, Def, bool field){
         Symbol * newsymbol = SemanticAnalysisVarDec(curVarDec,symtab,irSys,basetype,field);
 
         /* local variable declaration starts here */
+        newsymbol->attribute.irOperand = creatOperand(irSys,IR(VAR),IR(NORMAL));
         if(newsymbol->attribute.IdType->TypeClass == ARRAY || newsymbol->attribute.IdType->TypeClass == STRUCTURE){
             /* allocate space for array and structure */
             operand * sizeOfType = creatOperand(irSys,IR(SIZE),newsymbol->attribute.IdType->typeWidth);
@@ -221,7 +223,7 @@ SA(void, Def, bool field){
         if(curDec->child_cnt == 3){
             /* VarDec ASSIGNOP Exp */
             operand * srcOperand = NULL;
-            TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab,irSys,false, &srcOperand);
+            TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab,irSys,false, &srcOperand,NULL,NULL,false);
             if(field){
                 /* Initialization of field. */
                 ReportSemanticError(curDec->lineno,15,NULL);
@@ -313,8 +315,7 @@ SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field){
     Symbol * newsymbol = Insert(symtab,varname);
     newsymbol->attribute.IdClass = VARIABLE;
     newsymbol->attribute.IdType = pretype;
-    /* Assign an operand for non-field variable */
-    if(!field) newsymbol->attribute.irOperand = creatOperand(irSys,IR(VAR),IR(NORMAL));
+
     return newsymbol;
 }
 
@@ -375,9 +376,12 @@ SA(Symbol*, FunDec, TypeDescriptor * returntype, bool definition){
             TypeDescriptor * basetype = SemanticAnalysisSpecifier(curSpecifier,symtab,irSys);
             Symbol * newParam = SemanticAnalysisVarDec(curVarDec,symtab,irSys,basetype,false);            
             newArgc += 1;
+            newParam->attribute.irOperand = NULL;
             /* parameter declaration starts here */
             if(definition){
                 /* PARAM x */
+                /* x stores value of basic type or address of complex type */
+                newParam->attribute.irOperand = creatOperand(irSys,IR(PARAM),IR(NORMAL));
                 generateCode(irSys,IS(PARAM),newParam->attribute.irOperand,NULL,NULL);
             }
 
@@ -420,7 +424,7 @@ SA(Symbol*, FunDec, TypeDescriptor * returntype, bool definition){
     Return a pointer to a TypeDescriptor that describes Exp.
     No new TypeDescriptor will be created.
 */
-SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand){
+SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * labelTrue, operand * labelFalse, bool conditionExp){
     int Production;
     switch(n->child_cnt){
         case 1 :
@@ -811,7 +815,9 @@ SA(void, Stmt, TypeDescriptor * returntype){
     switch(Production){
         case 1 : /* Exp SEMI */
             {
-                SemanticAnalysisExp(n->child_list[0],symtab,irSys,false);
+                /* Top-most level of exp */
+                operand * expOperand = NULL;
+                SemanticAnalysisExp(n->child_list[0],symtab,irSys,false,&expOperand,NULL,NULL,false);
                 break;
             }
         case 2 : /* CompSt */
@@ -824,41 +830,92 @@ SA(void, Stmt, TypeDescriptor * returntype){
             }
         case 3 : /* RETURN Exp SEMI */
             {
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[1],symtab,irSys,false);
-                if(!IsEqualType(exptype,returntype))
+                operand * expOperand = NULL;
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[1],symtab,irSys,false,&expOperand,NULL,NULL,false);
+                if(!IsEqualType(exptype,returntype)){
                     /* Type mismatched for return type. */
                     ReportSemanticError(n->child_list[1]->lineno,8,NULL);
+                }else{
+                    /* Always return a basic type value */
+                    /* RETURN x */
+                    generateCode(irSys,IS(RETURN),expOperand,NULL,NULL);
+                }
+
                 break;
             }
         case 4 : /* IF LP Exp RP Stmt */
             {
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false);
+                operand * expOperand = NULL;
+                operand * labelTrue = NULL;
+                operand * labelFalse = creatOperand(irSys,IR(LABEL));
+                
+                /*
+                        IF False Exp GOTO labelFalse
+                        Stmt.code
+                    LABEL labelFalse :
+                */
+                
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,&expOperand,labelTrue,labelFalse,true);
                 if(!IsEqualType(exptype,BasicInt())){
                     /* Type mismatched for operands. */
                     ReportSemanticError(n->child_list[2]->lineno,7,NULL);
                 }
-                SemanticAnalysisStmt(n->child_list[4],symtab,irSys,returntype);
+                SemanticAnalysisStmt(n->child_list[4],symtab,irSys,returntype);                
+                generateCode(irSys,IS(LABEL),labelFalse,NULL,NULL);
                 break;
             }
         case 5 : /* IF LP Exp RP Stmt ELSE Stmt */
             {
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false);
+                operand * expOperand = NULL;
+                operand * labelTrue = NULL;
+                operand * labelFalse = creatOperand(irSys,IR(LABEL));
+                operand * labelNext = creatOperand(irSys,IR(LABEL));
+
+                /*
+                        IF False Exp GOTO labelFalse
+                        Stmt1.code
+                        GOTO labelNext
+                    LABEL labelFalse :
+                        Stmt2.code
+                    LABEL labelNext :
+                */
+
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,&expOperand,labelTrue,labelFalse,true);
                 if(!IsEqualType(exptype,BasicInt())){
                     /* Type mismatched for operands. */
                     ReportSemanticError(n->child_list[2]->lineno,7,NULL);
                 }
                 SemanticAnalysisStmt(n->child_list[4],symtab,irSys,returntype);
+                generateCode(irSys,IS(GOTO),labelNext,NULL,NULL);
+                generateCode(irSys,IS(LABEL),labelFalse,NULL,NULL);
                 SemanticAnalysisStmt(n->child_list[6],symtab,irSys,returntype);
+                generateCode(irSys,IS(LABEL),labelNext,NULL,NULL);
                 break;
             }
         case 6 : /* WHILE LP Exp RP Stmt */
             {
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false);
+                operand * expOperand = NULL;
+                operand * labelBegin = creatOperand(irSys,IR(LABEL));
+                operand * labelTrue = NULL;
+                operand * labelFalse = creatOperand(irSys,IR(LABEL));
+                
+                /*
+                    LABEL labelBegin :
+                        IF False Exp GOTO labelFalse
+                        Stmt.code
+                        GOTO labelBegin
+                    LABEL labelFalse :
+                */
+
+               generateCode(irSys,IS(LABEL),labelBegin,NULL,NULL);
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,&expOperand,labelTrue,labelFalse,true);
                 if(!IsEqualType(exptype,BasicInt())){
                     /* Type mismatched for operands. */
                     ReportSemanticError(n->child_list[2]->lineno,7,NULL);
                 }
                 SemanticAnalysisStmt(n->child_list[4],symtab,irSys,returntype);
+                generateCode(irSys,IS(GOTO),labelBegin,NULL,NULL);
+                generateCode(irSys,IS(LABEL),labelFalse,NULL,NULL);
                 break;
             }
         default : break;
