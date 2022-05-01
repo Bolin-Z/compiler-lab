@@ -9,7 +9,9 @@ SA(void, DefList, bool fields);
 SA(void, Def, bool field);
 SA(Symbol*, VarDec, TypeDescriptor * basetype, bool field);
 SA(Symbol*, FunDec, TypeDescriptor * returntype, bool declaration);
-SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * labelTrue, operand * labelFalse, bool conditionExp);
+SA(TypeDescriptor*, Exp, bool LeftHand, operand * expIrOperand);
+SA(TypeDescriptor*, ExpCondition, bool LeftHand, operand * labelTrue, operand * labelFalse);
+SA(int, ExpProduction);
 SA(void, StmtList, TypeDescriptor * returntype);
 SA(void, Stmt, TypeDescriptor * returntype); // Working ON
 
@@ -222,8 +224,8 @@ SA(void, Def, bool field){
 
         if(curDec->child_cnt == 3){
             /* VarDec ASSIGNOP Exp */
-            operand * srcOperand = NULL;
-            TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab,irSys,false, &srcOperand,NULL,NULL,false);
+            operand * srcOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+            TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab,irSys,false,srcOperand,NULL,NULL);
             if(field){
                 /* Initialization of field. */
                 ReportSemanticError(curDec->lineno,15,NULL);
@@ -420,11 +422,11 @@ SA(Symbol*, FunDec, TypeDescriptor * returntype, bool definition){
     return newfun;
 }
 
-/* 
-    Return a pointer to a TypeDescriptor that describes Exp.
-    No new TypeDescriptor will be created.
+
+/*
+    Return the Production number of Exp
 */
-SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * labelTrue, operand * labelFalse, bool conditionExp){
+SA(int, ExpProduction){
     int Production;
     switch(n->child_cnt){
         case 1 :
@@ -467,33 +469,25 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
             break;
         default : Production = 0; break;
     }
+    return Production;
+}
+
+SA(TypeDescriptor*, ExpCondition, bool LeftHand, operand * labelTrue, operand * labelFalse){
+    int Production = SemanticAnalysisExpProduction(n,symtab,irSys);
     switch(Production){
-        case 1 : /* Exp ASSIGNOP Exp */
-            {
-                TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,true);
-                TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,irSys,LeftHand);
-                if(IsErrorType(lexp) || IsErrorType(rexp)){
-                    /* lexp or rexp contains error */
-                    return BasicError();
-                }else{
-                    if(!IsEqualType(lexp,rexp)){
-                        /* Type mismatched for assignment. */
-                        ReportSemanticError(n->lineno,5,NULL);
-                        return BasicError();
-                    }
-                    return lexp;
-                }
-            }
-        case 2 : /* Exp AND Exp */
-        case 3 : /* Exp OR Exp */
+        case 2 :  /* Exp AND Exp */
             {
                 if(LeftHand){
                     /* Appearance of rvalue on left hand side of assignment. */
                     ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
-                    TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,false);
-                    TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false);
+                    operand * lexpTrueLabel = NULL;
+                    operand * lexpFalseLabel = (labelFalse) ? labelFalse : creatOperand(irSys,IR(LABEL));
+                    operand * rexpTrueLabel = labelTrue;
+                    operand * rexpFalseLabel = labelFalse;
+                    TypeDescriptor * lexp = SemanticAnalysisExpCondition(n->child_list[0],symtab,irSys,false,lexpTrueLabel,lexpFalseLabel);
+                    TypeDescriptor * rexp = SemanticAnalysisExpCondition(n->child_list[2],symtab,irSys,false,rexpTrueLabel,rexpFalseLabel);
                     if(IsErrorType(lexp) || IsErrorType(rexp)){
                         /* lexp or rexp contains error */
                         return BasicError();
@@ -508,41 +502,395 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
                             /* Type mismatched for operands. */
                             ReportSemanticError(n->child_list[2]->lineno,7,NULL);
                         }
-                        if(lint && rint) return BasicInt();
-                        else return BasicError();
+                        if(lint && rint){
+                            if(labelFalse == NULL){
+                                /* LABEL lexpFalseLabel : */
+                                generateCode(irSys,IS(LABEL),lexpFalseLabel,NULL,NULL);
+                            }
+                            return BasicInt();
+                        }else return BasicError();
                     }
                 }
             }
-        case 4 : /* Exp RELOP Exp */
+        case 3 :  /* Exp OR Exp */
             {
                 if(LeftHand){
                     /* Appearance of rvalue on left hand side of assignment. */
                     ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
-                    TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,false);
-                    TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false);
+                    operand * lexpTrueLabel = (labelTrue) ? labelTrue : creatOperand(irSys,IR(LABEL));
+                    operand * lexpFalseLabel = NULL;
+                    operand * rexpTrueLabel = labelTrue;
+                    operand * rexpFalseLabel = labelFalse;
+                    TypeDescriptor * lexp = SemanticAnalysisExpCondition(n->child_list[0],symtab,irSys,false,lexpTrueLabel,lexpFalseLabel);
+                    TypeDescriptor * rexp = SemanticAnalysisExpCondition(n->child_list[2],symtab,irSys,false,rexpTrueLabel,rexpFalseLabel);
+                    if(IsErrorType(lexp) || IsErrorType(rexp)){
+                        /* lexp or rexp contains error */
+                        return BasicError();
+                    }else{
+                        bool lint = IsEqualType(lexp,BasicInt());
+                        bool rint = IsEqualType(rexp,BasicInt());
+                        if(!lint){
+                            /* Type mismatched for operands. */
+                            ReportSemanticError(n->child_list[0]->lineno,7,NULL);
+                        }
+                        if(!rint){
+                            /* Type mismatched for operands. */
+                            ReportSemanticError(n->child_list[2]->lineno,7,NULL);
+                        }
+                        if(lint && rint){
+                            if(labelTrue == NULL){
+                                /* LABEL lexpTrueLabel : */
+                                generateCode(irSys,IS(LABEL),lexpTrueLabel,NULL,NULL);
+                            }
+                            return BasicInt();
+                        }else return BasicError();
+                    }
+                }
+            }
+        case 4 :  /* Exp RELOP Exp */
+            {
+                if(LeftHand){
+                    /* Appearance of rvalue on left hand side of assignment. */
+                    ReportSemanticError(n->lineno,6,NULL);
+                    return BasicError();
+                }else{
+                    operand * lexpOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                    operand * rexpOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                    TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,false,lexpOperand);
+                    TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,rexpOperand);
                     if(IsErrorType(lexp) || IsErrorType(rexp)){
                         return BasicError();
                     }else{
                         if(IsEqualType(lexp,rexp)){
                             if(IsEqualType(lexp,BasicInt()) || IsEqualType(lexp,BasicFloat())){
                                 /* Relation operation should return boolean value */
+                                int relop = ((struct CST_mul_node*)(n->child_list[1]))->tktype;
+                                bool ifTrue = (labelTrue == NULL);
+                                int instr = 0;
+                                switch(relop){
+                                    case TK(LT)  : instr = (ifTrue) ? IS(LESS) : IS(GREATEREQ); break; 
+                                    case TK(LTE) : instr = (ifTrue) ? IS(LESSEQ) : IS(GREATER); break;
+                                    case TK(GT)  : instr = (ifTrue) ? IS(GREATER) : IS(LESSEQ); break;
+                                    case TK(GTE) : instr = (ifTrue) ? IS(GREATEREQ) : IS(LESS); break;
+                                    case TK(EQ)  : instr = (ifTrue) ? IS(EQ) : IS(NEQ); break;
+                                    case TK(NEQ) : instr = (ifTrue) ? IS(NEQ) : IS(EQ); break;
+                                    default : /* error */
+                                        break;
+                                }
+                                if(labelTrue != NULL && labelFalse != NULL) {
+                                    /*
+                                        IF Exp RELOP Exp GOTO labelTrue
+                                        GOTO labelFalse
+                                    */
+                                    generateCode(irSys,instr,labelTrue,lexpOperand,rexpOperand);
+                                    generateCode(irSys,IS(GOTO),labelFalse,NULL,NULL);
+                                }else if(labelTrue != NULL){
+                                    /* IF Exp RELOP Exp GOTO labelTrue */
+                                    generateCode(irSys,instr,labelTrue,lexpOperand,rexpOperand);
+                                }else if(labelFalse != NULL){
+                                    /* IF False Exp RELOP Exp GOTO labelFalse */
+                                    generateCode(irSys,instr,labelFalse,lexpOperand,rexpOperand);
+                                }else{
+                                    /* Fall through */
+                                }
                                 return BasicInt();
-                            }
-                            else{
+                            }else{
                                 /* Type mismatched for operands. */
                                 ReportSemanticError(n->lineno,7,NULL);
                                 return BasicError();
-                            }                            
-                        }
-                        else{
+                            }
+                        }else{
                             /* Type mismatched for operands. */
                             ReportSemanticError(n->lineno,7,NULL);
                             return BasicError();
                         }
                     }
                 }
+            }
+        case 11 : /* NOT Exp */
+            {
+                if(LeftHand){
+                    /* Appearance of rvalue on left hand side of assignment. */
+                    ReportSemanticError(n->lineno,6,NULL);
+                    return BasicError();
+                }else{
+                    /* Switch labelTrue and labelFalse */
+                    TypeDescriptor * exp = SemanticAnalysisExpCondition(n->child_list[1],symtab,irSys,false,labelFalse,labelTrue);
+                    if(IsEqualType(exp,BasicInt()) || IsErrorType(exp)){
+                        return exp;
+                    }else{
+                        /* Type mismatched for operands. */
+                        ReportSemanticError(n->child_list[1]->lineno,7,NULL);
+                        return BasicError();
+                    }
+                }
+            }
+        case 1 :  /* Exp ASSIGNOP Exp */
+        case 5 :  /* Exp PLUS Exp */
+        case 6 :  /* Exp MINUS Exp */
+        case 7 :  /* Exp STAR Exp */
+        case 8 :  /* Exp DIV Exp */
+        case 9 :  /* LP Exp RP */
+        case 10 : /* MINUS Exp */
+        case 12 : /* ID LP Args RP */
+        case 13 : /* ID LP RP */
+        case 14 : /* Exp LB Exp RB */
+        case 15 : /* Exp DOT ID */
+            {
+                operand * curExpIrOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                TypeDescriptor * curExp = SemanticAnalysisExp(n,symtab,irSys,LeftHand,curExpIrOperand);
+                if(IsEqualType(curExp,BasicInt())){
+                    if(labelTrue != NULL && labelFalse != NULL){
+                        /*
+                            IF Exp != #0 GOTO labelTrue
+                            GOTO labelFalse
+                        */
+                        generateCode(irSys,IS(NEQ),labelTrue,curExpIrOperand,zeroOperand());
+                        generateCode(irSys,IS(GOTO),labelFalse,NULL,NULL);
+                    }else if(labelTrue != NULL){
+                        /* IF Exp != #0 GOTO labelTrue */
+                        generateCode(irSys,IS(NEQ),labelTrue,curExpIrOperand,zeroOperand());
+                    }else if(labelFalse != NULL){
+                        /* IF Exp == #0 GOTO labelFalse */
+                        generateCode(irSys,IS(EQ),labelFalse,curExpIrOperand,zeroOperand());
+                    }else{
+                        /* Fall through */
+                    }
+                }
+                return curExp;
+            }
+        case 16 : /* ID */
+            {
+                char * idname = ((struct CST_id_node*)(n->child_list[0]))->ID;
+                Symbol * id = LookUp(symtab,idname,false);
+                if(id == NULL){
+                    /* Use undefined variable. */
+                    ReportSemanticError(n->lineno,1,NULL);
+                    return BasicError();
+                }else{
+                    if(id->attribute.IdClass != VARIABLE){
+                        /* Use undefined variable. */
+                        ReportSemanticError(n->lineno,1,NULL);
+                        return BasicError();
+                    }else{
+                        if(IsEqualType(id->attribute.IdType,BasicInt()) || IsEqualType(id->attribute.IdType,BasicFloat())){
+                            if(labelTrue != NULL && labelFalse != NULL){
+                                /*
+                                    IF ID != #0 GOTO labelTrue
+                                    GOTO labelFalse
+                                */
+                                generateCode(irSys,IS(NEQ),labelTrue,id->attribute.irOperand,zeroOperand());
+                                generateCode(irSys,IS(GOTO),labelFalse,NULL,NULL);
+                            }else if(labelTrue != NULL){
+                                /* IF ID != #0 GOTO labelTrue */
+                                generateCode(irSys,IS(NEQ),labelTrue,id->attribute.irOperand,zeroOperand());
+                            }else if(labelFalse != NULL){
+                                /* IF ID == #0 GOTO labelFalse */
+                                generateCode(irSys,IS(EQ),labelFalse,id->attribute.irOperand,zeroOperand());
+                            }else{
+                                /* Fall through */
+                            }
+                        }
+                        return id->attribute.IdType;
+                    }
+                }
+            }
+        case 17 : /* INT */
+            {
+                if(LeftHand){
+                    /* Appearance of rvalue on left hand side of assignment. */
+                    ReportSemanticError(n->lineno,6,NULL);
+                    return BasicError();
+                }else{
+                    int val = ((struct CST_int_node*)n->child_list[0])->intval;
+                    bool valTrue = (val != 0);
+                    if(labelTrue != NULL && labelFalse != NULL){
+                        if(valTrue){
+                            /* GOTO labelTrue */
+                            generateCode(irSys,IS(GOTO),labelTrue,NULL,NULL);
+                        }else{
+                            /* GOTO labelFalse */
+                            generateCode(irSys,IS(GOTO),labelFalse,NULL,NULL);
+                        }
+                    }else if(labelTrue != NULL){
+                        if(valTrue){
+                            /* GOTO labelTrue */
+                            generateCode(irSys,IS(GOTO),labelTrue,NULL,NULL);
+                        }else{
+                            /* Fall through */
+                        }
+                    }else if(labelFalse != NULL){
+                        if(valTrue){
+                            /* Fall through */
+                        }else{
+                            /* GOTO labelFalse */
+                            generateCode(irSys,IS(GOTO),labelFalse,NULL,NULL);
+                        }
+                    }else{
+                        /* Fall through */
+                    }
+                    return BasicInt();
+                }
+            }
+        case 18 : /* FLOAT */
+            {
+                if(LeftHand){
+                    /* Appearance of rvalue on left hand side of assignment. */
+                    ReportSemanticError(n->lineno,6,NULL);
+                    return BasicError();
+                }else{
+                    float val = ((struct CST_float_node*)n->child_list[0])->floatval;
+                    bool valTrue = (val != 0);
+                    if(labelTrue != NULL && labelFalse != NULL){
+                        if(valTrue){
+                            /* GOTO labelTrue */
+                            generateCode(irSys,IS(GOTO),labelTrue,NULL,NULL);
+                        }else{
+                            /* GOTO labelFalse */
+                            generateCode(irSys,IS(GOTO),labelFalse,NULL,NULL);
+                        }
+                    }else if(labelTrue != NULL){
+                        if(valTrue){
+                            /* GOTO labelTrue */
+                            generateCode(irSys,IS(GOTO),labelTrue,NULL,NULL);
+                        }else{
+                            /* Fall through */
+                        }
+                    }else if(labelFalse != NULL){
+                        if(valTrue){
+                            /* Fall through */
+                        }else{
+                            /* GOTO labelFalse */
+                            generateCode(irSys,IS(GOTO),labelFalse,NULL,NULL);
+                        }
+                    }else{
+                        /* Fall through */
+                    }
+                    return BasicFloat();
+                }
+            }
+        default : /* error */
+            return BasicError();
+    }
+}
+
+/* 
+    Return a pointer to a TypeDescriptor that describes Exp.
+    No new TypeDescriptor will be created.
+*/
+SA(TypeDescriptor*, Exp, bool LeftHand, operand * expIrOperand){
+    int Production = SemanticAnalysisExpProduction(n,symtab,irSys);
+    switch(Production){
+        case 1 : /* Exp ASSIGNOP Exp */
+            {   
+                operand * lexpOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                operand * rexpOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,true,lexpOperand);
+                TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,irSys,LeftHand,rexpOperand);
+                if(IsErrorType(lexp) || IsErrorType(rexp)){
+                    /* lexp or rexp contains error */
+                    return BasicError();
+                }else{
+                    if(!IsEqualType(lexp,rexp)){
+                        /* Type mismatched for assignment */
+                        ReportSemanticError(n->lineno,5,NULL);
+                        return BasicError();
+                    }else{
+                        if(lexp->TypeClass == ARRAY || lexp->TypeClass == STRUCTURE){
+                            /* Tricky: use memory copy here */
+                            operand * sizeOfType = creatOperand(irSys,IR(INT),lexp->typeWidth);
+                            operand * dstAddr =  lexpOperand;
+                            operand * srcAddr = rexpOperand;
+                            operand * offSet = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                            operand * dstTargetAddr = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                            operand * srcTargetAddr = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                            operand * tempVal = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                            operand * labelBegin = creatOperand(irSys,IR(LABEL));
+                            operand * labelEnd = creatOperand(irSys,IR(LABEL));
+                            /*
+                                    offSet := #0
+                                LABEL labelBegin :
+                                    IF offSet >= sizeOfType GOTO labelEnd
+                                    dstTargetAddr := dstAddr + offSet
+                                    srcTargetAddr := srcAddr + offSet
+                                    tempVal := *srcTargetAddr
+                                    *dstTargetAddr := tempval
+                                    offSet := offSet + #4
+                                    GOTO labelBegin
+                                LABEL labelEnd :
+                            */
+                            generateCode(irSys,IS(ASSIGN),offSet,zeroOperand(),NULL);
+                            generateCode(irSys,IS(LABEL),labelBegin,NULL,NULL);
+                            generateCode(irSys,IS(GREATEREQ),labelEnd,offSet,sizeOfType);
+                            generateCode(irSys,IS(PLUS),dstTargetAddr,dstAddr,offSet);
+                            generateCode(irSys,IS(PLUS),srcTargetAddr,srcAddr,offSet);
+                            generateCode(irSys,IS(GETVAL),tempVal,srcTargetAddr,NULL);
+                            generateCode(irSys,IS(SETVAL),dstTargetAddr,tempVal,NULL);
+                            generateCode(irSys,IS(PLUS),offSet,offSet,minTypeWidthOperand());
+                            generateCode(irSys,IS(GOTO),labelBegin,NULL,NULL);
+                            generateCode(irSys,IS(LABEL),labelEnd,NULL,NULL);
+                        }else{
+                            /* lexp := rexp */
+                            generateCode(irSys,IS(ASSIGN),lexpOperand,rexpOperand,NULL);
+                        }
+                        /* Exp := lexp */
+                        generateCode(irSys,IS(ASSIGN),expIrOperand,lexpOperand,NULL);
+                        return lexp;
+                    }
+                } 
+            }
+        case 2 : /* Exp AND Exp */
+            {
+                /* Exp := #0 */
+                generateCode(irSys,IS(ASSIGN),expIrOperand,zeroOperand(),NULL);
+                operand * newlabelFalse = creatOperand(irSys,IR(LABEL));
+                /* IF False Exp AND Exp GOTO newlabelFalse */
+                TypeDescriptor * curExp = SemanticAnalysisExpCondition(n,symtab,irSys,LeftHand,NULL,newlabelFalse);
+                if(IsEqualType(curExp,BasicInt())){
+                    /*
+                            Exp := #1
+                        LABEL newlabelFalse :
+                    */
+                    generateCode(irSys,IS(ASSIGN),expIrOperand,oneOperand(),NULL);
+                    generateCode(irSys,IS(LABEL),newlabelFalse,NULL,NULL);
+                }
+                return curExp;
+            }
+        case 3 : /* Exp OR Exp */
+            {
+                /* Exp := #1 */
+                generateCode(irSys,IS(ASSIGN),expIrOperand,oneOperand,NULL);
+                operand * newlabelTrue = creatOperand(irSys,IR(LABEL));
+                /* IF Exp OR Exp GOTO newlabelTrue */
+                TypeDescriptor * curExp = SemanticAnalysisExpCondition(n,symtab,irSys,LeftHand,newlabelTrue,NULL);
+                if(IsEqualType(curExp,BasicInt())){
+                    /*
+                            Exp := #0
+                        LABEL newlabelTrue :
+                    */
+                    generateCode(irSys,IS(ASSIGN),expIrOperand,zeroOperand(),NULL);
+                    generateCode(irSys,IS(LABEL),newlabelTrue,NULL,NULL);
+                }
+                return curExp;
+            }
+        case 4 : /* Exp RELOP Exp */
+            {
+                /* Exp := #1 */
+                generateCode(irSys,IS(ASSIGN),expIrOperand,oneOperand(),NULL);
+                operand * newlabelTrue = creatOperand(irSys,IR(LABEL));
+                /* IF Exp RELOP Exp GOTO newlabelTrue */
+                TypeDescriptor * curExp = SemanticAnalysisExpCondition(n,symtab,irSys,LeftHand,newlabelTrue,NULL);
+                if(IsEqualType(curExp,BasicInt())){
+                    /*
+                            Exp := #0
+                        LABEL newlabelTrue :
+                    */
+                    generateCode(irSys,IS(ASSIGN),expIrOperand,zeroOperand(),NULL);
+                    generateCode(irSys,IS(LABEL),newlabelTrue,NULL,NULL);
+                }
+                return curExp;
             }
         case 5 : /* Exp PLUS Exp */
         case 6 : /* Exp MINUS Exp */
@@ -554,21 +902,33 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
                     ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
-                    TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,false);
-                    TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false);
+                    operand * lexpOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                    operand * rexpOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                    TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,false,lexpOperand);
+                    TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,rexpOperand);
                     if(IsErrorType(lexp) || IsErrorType(rexp)){
                         return BasicError();
                     }else{
                         if(IsEqualType(lexp,rexp)){
-                            if(IsEqualType(lexp,BasicInt()) || IsEqualType(lexp,BasicFloat()))
+                            if(IsEqualType(lexp,BasicInt()) || IsEqualType(lexp,BasicFloat())){
+                                int instr = 0;
+                                switch(Production){
+                                    case 5 : instr = IS(PLUS); break;
+                                    case 6 : instr = IS(MINUS); break;
+                                    case 7 : instr = IS(MUL); break;
+                                    case 8 : instr = IS(DIV); break;
+                                    default : /* error */
+                                        break;
+                                }
+                                /* Exp := lexp OP rexp */
+                                generateCode(irSys,instr,expIrOperand,lexpOperand,rexpOperand);
                                 return lexp;
-                            else{
+                            }else{
                                 /* Type mismatched for operands. */
                                 ReportSemanticError(n->lineno,7,NULL);
                                 return BasicError();
-                            }                            
-                        }
-                        else{
+                            }
+                        }else{
                             /* Type mismatched for operands. */
                             ReportSemanticError(n->lineno,7,NULL);
                             return BasicError();
@@ -577,7 +937,9 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
                 }
             }
         case 9 : /* LP Exp RP */
-            return SemanticAnalysisExp(n->child_list[1],symtab,irSys,LeftHand);
+            {
+                return SemanticAnalysisExp(n->child_list[1],symtab,irSys,LeftHand,expIrOperand);
+            }
         case 10 : /* MINUS Exp */
             {
                 if(LeftHand){
@@ -585,8 +947,13 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
                     ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
-                    TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[1],symtab,irSys,false);
-                    if(IsEqualType(exp,BasicInt()) || IsEqualType(exp,BasicFloat()) || IsErrorType(exp)){
+                    operand * subExpOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                    TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[1],symtab,irSys,false,subExpOperand);
+                    if(IsErrorType(exp)){
+                        return BasicError();
+                    }else if(IsEqualType(exp,BasicInt()) || IsEqualType(exp,BasicFloat())){
+                        /* Exp := #0 - subExp */
+                        generateCode(irSys,IS(MINUS),expIrOperand,zeroOperand(),subExpOperand);
                         return exp;
                     }else{
                         /* Type mismatched for operands. */
@@ -597,20 +964,20 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
             }
         case 11 : /* NOT Exp */
             {
-                if(LeftHand){
-                    /* Appearance of rvalue on left hand side of assignment. */
-                    ReportSemanticError(n->lineno,6,NULL);
-                    return BasicError();
-                }else{
-                    TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[1],symtab,irSys,false);
-                    if(IsEqualType(exp,BasicInt()) || IsErrorType(exp)){
-                        return exp;
-                    }else{
-                        /* Type mismatched for operands. */
-                        ReportSemanticError(n->child_list[1]->lineno,7,NULL);
-                        return BasicError();
-                    }
+                /* Exp := #1 */
+                generateCode(irSys,IS(ASSIGN),expIrOperand,oneOperand(),NULL);
+                operand * newlabelTrue = creatOperand(irSys,IR(LABEL));
+                /* IF NOT Exp GOTO newlabelTrue */
+                TypeDescriptor * curExp = SemanticAnalysisExpCondition(n,symtab,irSys,LeftHand,newlabelTrue,NULL);
+                if(IsEqualType(curExp,BasicInt())){
+                    /*
+                            Exp := #0
+                        LABEL newlabelTrue :
+                    */
+                    generateCode(irSys,IS(ASSIGN),expIrOperand,zeroOperand(),NULL);
+                    generateCode(irSys,IS(LABEL),newlabelTrue,NULL,NULL);
                 }
+                return curExp;
             }
         case 12 : /* ID LP Args RP */
             {
@@ -641,16 +1008,22 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
                             ReportSemanticError(n->lineno,9,NULL);
                             return BasicError();
                         }
+
+                        operand ** argList = (operand**)malloc(expectargnum*sizeof(operand*));
+
                         for(int i = 0;i < expectargnum;i++){
                             struct CST_node * curExp = curArg->child_list[0];
-                            TypeDescriptor * curExptype = SemanticAnalysisExp(curExp,symtab,irSys,false);
+                            argList[i] = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                            TypeDescriptor * curExptype = SemanticAnalysisExp(curExp,symtab,irSys,false,argList[i]);
                             TypeDescriptor * expecttype = fun->attribute.Info.Func.ArgTypeList[i];
                             if(IsErrorType(curExptype)){
+                                free(argList);
                                 return BasicError();
                             }
                             if(!IsEqualType(expecttype,curExptype)){
                                 /* Arguments number or type mismatch. */
                                 ReportSemanticError(curExp->lineno,9,NULL);
+                                free(argList);
                                 return BasicError();
                             }
                             bool lastexparg = (i == (expectargnum - 1));
@@ -658,10 +1031,30 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
                             if((lastexparg && (!lastrealarg)) || ((!lastexparg) && lastrealarg)){
                                 /* Arguments number or type mismatch. */
                                 ReportSemanticError(n->lineno,9,NULL);
+                                free(argList);
                                 return BasicError();
                             }
                             curArg = curArg->child_list[2];
                         }
+
+                        if(strcmp("write",funid)){
+                            /* 
+                                WRITE x 
+                                Exp := #0
+                            */
+                            generateCode(irSys,IS(WRITE),argList[0],NULL,NULL);
+                            generateCode(irSys,IS(ASSIGN),expIrOperand,zeroOperand(),NULL);
+                        }else{
+                            for(int i = expectargnum - 1;i >= 0;i--){
+                                /* PARAM x */
+                                generateCode(irSys,IS(PARAM),argList[i],NULL,NULL);
+                            }
+                            /* Exp := CALL f */
+                            generateCode(irSys,IS(CALL),expIrOperand,fun->attribute.irOperand,NULL);
+                        }
+
+                        free(argList);
+
                         return fun->attribute.IdType;
                     }
                 }
@@ -684,11 +1077,22 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
                         ReportSemanticError(n->lineno,11,NULL);
                         return BasicError();
                     }else{
+                        if(fun->attribute.Info.Func.defined == false){
+                            /* Function was not defined yet. */
+                            ReportSemanticError(n->lineno,2,fun->id);
+                        }
                         if(fun->attribute.Info.Func.Argc != 0){
                             /* Arguments number or type mismatch. */
                             ReportSemanticError(n->lineno,9,NULL);
                             return BasicError();
                         }else{
+                            if(strcmp("read",funid) == 0){
+                                /* READ Exp */
+                                generateCode(irSys,IS(READ),expIrOperand,NULL,NULL);
+                            }else{
+                                /* Exp := CALL f */
+                                generateCode(irSys,IS(CALL),expIrOperand,fun->attribute.irOperand,NULL);
+                            }
                             return fun->attribute.IdType;
                         }
                     }
@@ -696,8 +1100,10 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
             }
         case 14 : /* Exp LB Exp RB */
             {
-                TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,LeftHand);
-                TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false);
+                operand * lexpOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                operand * rexpOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                TypeDescriptor * lexp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,LeftHand,lexpOperand);
+                TypeDescriptor * rexp = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,rexpOperand);
                 bool rterror = false;
                 if(IsErrorType(lexp)){
                     rterror = true;
@@ -717,11 +1123,29 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
                         rterror = true;
                     }
                 }
+                if(!rterror){
+                    int elemTypeSize = lexp->Array.elem->typeWidth;
+                    operand * sizeOperand = creatOperand(irSys,IR(INT),elemTypeSize);
+                    /*
+                        rexp := rexp * elemsize
+                        lexp := lexp + rexp
+                    */
+                    generateCode(irSys,IS(MUL),rexpOperand,rexpOperand,sizeOperand);
+                    generateCode(irSys,IS(PLUS),lexpOperand,lexpOperand,rexpOperand);
+                    if(lexp->Array.elem->TypeClass == BASIC){
+                        /* Exp := *lexp */
+                        generateCode(irSys,IS(GETVAL),expIrOperand,lexpOperand,NULL);
+                    }else{
+                        /* Exp := lexp */
+                        generateCode(irSys,IS(ASSIGN),expIrOperand,lexpOperand,NULL);
+                    }
+                }
                 return (rterror) ? BasicError() : lexp->Array.elem;
             }
         case 15 : /* Exp DOT ID */
             {
-                TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,LeftHand);
+                operand * curExpOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                TypeDescriptor * exp = SemanticAnalysisExp(n->child_list[0],symtab,irSys,LeftHand,curExpOperand);
                 if(IsErrorType(exp)){
                     return BasicError();
                 }else{
@@ -732,10 +1156,22 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
                     }else{
                         FieldList * curField = exp->Structure;
                         char * fieldid = ((struct CST_id_node *)(n->child_list[2]))->ID;
+                        int offset = 0;
                         while(curField != NULL){
                             if(strcmp(fieldid,curField->FieldName) == 0){
+                                operand * offsetOperand = creatOperand(irSys,IR(INT),offset);
+                                /* curExp := curExp + offset */
+                                generateCode(irSys,IS(PLUS),curExpOperand,curExpOperand,offsetOperand);
+                                if(curField->FieldType->TypeClass == BASIC){
+                                    /* Exp := *curExp */
+                                    generateCode(irSys,IS(GETVAL),expIrOperand,curExpOperand,NULL);
+                                }else{
+                                    /* Exp := curExp */
+                                    generateCode(irSys,IS(ASSIGN),expIrOperand,curExpOperand,NULL);
+                                }
                                 return curField->FieldType;
                             }
+                            offset += curField->FieldType->typeWidth;
                             curField = curField->NextField;
                         }
                         /* Access to undefined field. */
@@ -758,6 +1194,22 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
                         ReportSemanticError(n->lineno,1,NULL);
                         return BasicError();
                     }else{
+                        if(id->attribute.IdType->TypeClass == BASIC){
+                            /* Exp := ID */
+                            generateCode(irSys,IS(ASSIGN),expIrOperand,id->attribute.irOperand,NULL);
+                        }else if(id->attribute.IdType->TypeClass == ARRAY || id->attribute.IdType->TypeClass == STRUCTURE){
+                            if(id->attribute.irOperand->operandClass == IR(VAR)){
+                                /* Exp := &ID */
+                                generateCode(irSys,IS(GETADDR),expIrOperand,id->attribute.irOperand,NULL);
+                            }else if(id->attribute.irOperand->operandClass == IR(PARAM)){
+                                /* Exp := PARAM */
+                                generateCode(irSys,IS(ASSIGN),expIrOperand,id->attribute.irOperand,NULL);
+                            }else{
+                                /* error */
+                            }
+                        }else{
+                            /* error */
+                        }
                         return id->attribute.IdType;
                     }
                 }
@@ -769,6 +1221,10 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
                     ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
+                    int val = ((struct CST_int_node*)n->child_list[0])->intval;
+                    operand * intVal = creatOperand(irSys,IR(INT),val);
+                    /* Exp := INT */
+                    generateCode(irSys,IS(ASSIGN),expIrOperand,intVal,NULL);
                     return BasicInt();
                 }
             }
@@ -779,6 +1235,9 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand ** expIrOperand, operand * label
                     ReportSemanticError(n->lineno,6,NULL);
                     return BasicError();
                 }else{
+                    float val = ((struct CST_float_node*)n->child_list[0])->floatval;
+                    operand * floatVal = creatOperand(irSys,IR(FLOAT),val);
+                    generateCode(irSys,IS(ASSIGN),expIrOperand,floatVal,NULL);
                     return BasicFloat();
                 }
             }
@@ -816,8 +1275,8 @@ SA(void, Stmt, TypeDescriptor * returntype){
         case 1 : /* Exp SEMI */
             {
                 /* Top-most level of exp */
-                operand * expOperand = NULL;
-                SemanticAnalysisExp(n->child_list[0],symtab,irSys,false,&expOperand,NULL,NULL,false);
+                operand * expOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                SemanticAnalysisExp(n->child_list[0],symtab,irSys,false,expOperand,NULL,NULL);
                 break;
             }
         case 2 : /* CompSt */
@@ -830,8 +1289,8 @@ SA(void, Stmt, TypeDescriptor * returntype){
             }
         case 3 : /* RETURN Exp SEMI */
             {
-                operand * expOperand = NULL;
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[1],symtab,irSys,false,&expOperand,NULL,NULL,false);
+                operand * expOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[1],symtab,irSys,false,expOperand,NULL,NULL);
                 if(!IsEqualType(exptype,returntype)){
                     /* Type mismatched for return type. */
                     ReportSemanticError(n->child_list[1]->lineno,8,NULL);
@@ -845,7 +1304,6 @@ SA(void, Stmt, TypeDescriptor * returntype){
             }
         case 4 : /* IF LP Exp RP Stmt */
             {
-                operand * expOperand = NULL;
                 operand * labelTrue = NULL;
                 operand * labelFalse = creatOperand(irSys,IR(LABEL));
                 
@@ -855,7 +1313,7 @@ SA(void, Stmt, TypeDescriptor * returntype){
                     LABEL labelFalse :
                 */
                 
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,&expOperand,labelTrue,labelFalse,true);
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,NULL,labelTrue,labelFalse);
                 if(!IsEqualType(exptype,BasicInt())){
                     /* Type mismatched for operands. */
                     ReportSemanticError(n->child_list[2]->lineno,7,NULL);
@@ -866,7 +1324,6 @@ SA(void, Stmt, TypeDescriptor * returntype){
             }
         case 5 : /* IF LP Exp RP Stmt ELSE Stmt */
             {
-                operand * expOperand = NULL;
                 operand * labelTrue = NULL;
                 operand * labelFalse = creatOperand(irSys,IR(LABEL));
                 operand * labelNext = creatOperand(irSys,IR(LABEL));
@@ -880,7 +1337,7 @@ SA(void, Stmt, TypeDescriptor * returntype){
                     LABEL labelNext :
                 */
 
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,&expOperand,labelTrue,labelFalse,true);
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,NULL,labelTrue,labelFalse);
                 if(!IsEqualType(exptype,BasicInt())){
                     /* Type mismatched for operands. */
                     ReportSemanticError(n->child_list[2]->lineno,7,NULL);
@@ -894,7 +1351,6 @@ SA(void, Stmt, TypeDescriptor * returntype){
             }
         case 6 : /* WHILE LP Exp RP Stmt */
             {
-                operand * expOperand = NULL;
                 operand * labelBegin = creatOperand(irSys,IR(LABEL));
                 operand * labelTrue = NULL;
                 operand * labelFalse = creatOperand(irSys,IR(LABEL));
@@ -908,7 +1364,7 @@ SA(void, Stmt, TypeDescriptor * returntype){
                 */
 
                generateCode(irSys,IS(LABEL),labelBegin,NULL,NULL);
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,&expOperand,labelTrue,labelFalse,true);
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,NULL,labelTrue,labelFalse);
                 if(!IsEqualType(exptype,BasicInt())){
                     /* Type mismatched for operands. */
                     ReportSemanticError(n->child_list[2]->lineno,7,NULL);
