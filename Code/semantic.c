@@ -213,19 +213,21 @@ SA(void, Def, bool field){
         struct CST_node * curVarDec = curDec->child_list[0];
         Symbol * newsymbol = SemanticAnalysisVarDec(curVarDec,symtab,irSys,basetype,field);
 
-        /* local variable declaration starts here */
-        newsymbol->attribute.irOperand = creatOperand(irSys,IR(VAR),IR(NORMAL));
-        if(newsymbol->attribute.IdType->TypeClass == ARRAY || newsymbol->attribute.IdType->TypeClass == STRUCTURE){
-            /* allocate space for array and structure */
-            operand * sizeOfType = creatOperand(irSys,IR(SIZE),newsymbol->attribute.IdType->typeWidth);
-            /* DEC x size */
-            generateCode(irSys,IS(DEC),newsymbol->attribute.irOperand,sizeOfType,NULL);
+        if(!field){
+            /* local variable declaration starts here */
+            newsymbol->attribute.irOperand = creatOperand(irSys,IR(VAR),IR(NORMAL));
+            if(newsymbol->attribute.IdType->TypeClass == ARRAY || newsymbol->attribute.IdType->TypeClass == STRUCTURE){
+                /* allocate space for array and structure */
+                operand * sizeOfType = creatOperand(irSys,IR(SIZE),newsymbol->attribute.IdType->typeWidth);
+                /* DEC x size */
+                generateCode(irSys,IS(DEC),newsymbol->attribute.irOperand,sizeOfType,NULL);
+            }
         }
 
         if(curDec->child_cnt == 3){
             /* VarDec ASSIGNOP Exp */
             operand * srcOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
-            TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab,irSys,false,srcOperand,NULL,NULL);
+            TypeDescriptor * exptype = SemanticAnalysisExp(curDec->child_list[2],symtab,irSys,false,srcOperand);
             if(field){
                 /* Initialization of field. */
                 ReportSemanticError(curDec->lineno,15,NULL);
