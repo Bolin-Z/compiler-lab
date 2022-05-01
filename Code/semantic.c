@@ -1276,7 +1276,7 @@ SA(void, Stmt, TypeDescriptor * returntype){
             {
                 /* Top-most level of exp */
                 operand * expOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
-                SemanticAnalysisExp(n->child_list[0],symtab,irSys,false,expOperand,NULL,NULL);
+                SemanticAnalysisExp(n->child_list[0],symtab,irSys,false,expOperand);
                 break;
             }
         case 2 : /* CompSt */
@@ -1290,7 +1290,7 @@ SA(void, Stmt, TypeDescriptor * returntype){
         case 3 : /* RETURN Exp SEMI */
             {
                 operand * expOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[1],symtab,irSys,false,expOperand,NULL,NULL);
+                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[1],symtab,irSys,false,expOperand);
                 if(!IsEqualType(exptype,returntype)){
                     /* Type mismatched for return type. */
                     ReportSemanticError(n->child_list[1]->lineno,8,NULL);
@@ -1313,7 +1313,7 @@ SA(void, Stmt, TypeDescriptor * returntype){
                     LABEL labelFalse :
                 */
                 
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,NULL,labelTrue,labelFalse);
+                TypeDescriptor * exptype = SemanticAnalysisExpCondition(n->child_list[2],symtab,irSys,false,labelTrue,labelFalse);
                 if(!IsEqualType(exptype,BasicInt())){
                     /* Type mismatched for operands. */
                     ReportSemanticError(n->child_list[2]->lineno,7,NULL);
@@ -1337,7 +1337,7 @@ SA(void, Stmt, TypeDescriptor * returntype){
                     LABEL labelNext :
                 */
 
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,NULL,labelTrue,labelFalse);
+                TypeDescriptor * exptype = SemanticAnalysisExpCondition(n->child_list[2],symtab,irSys,false,labelTrue,labelFalse);
                 if(!IsEqualType(exptype,BasicInt())){
                     /* Type mismatched for operands. */
                     ReportSemanticError(n->child_list[2]->lineno,7,NULL);
@@ -1364,7 +1364,7 @@ SA(void, Stmt, TypeDescriptor * returntype){
                 */
 
                generateCode(irSys,IS(LABEL),labelBegin,NULL,NULL);
-                TypeDescriptor * exptype = SemanticAnalysisExp(n->child_list[2],symtab,irSys,false,NULL,labelTrue,labelFalse);
+                TypeDescriptor * exptype = SemanticAnalysisExpCondition(n->child_list[2],symtab,irSys,false,labelTrue,labelFalse);
                 if(!IsEqualType(exptype,BasicInt())){
                     /* Type mismatched for operands. */
                     ReportSemanticError(n->child_list[2]->lineno,7,NULL);
