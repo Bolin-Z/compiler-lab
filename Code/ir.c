@@ -23,7 +23,7 @@ irSystem * creatIrSystem(){
     irSystem * sys = (irSystem *)malloc(sizeof(irSystem));
     if(sys){
         sys->codeListHead = sys->codeListTail = NULL;
-        sys->poolList = creatOperandPool(sys->poolList);
+        sys->poolList = creatOperandPool(NULL);
         sys->counter.function = 1;
         sys->counter.variable = 0;
         sys->counter.tempVar = 0;

@@ -241,7 +241,7 @@ SA(void, Def, bool field){
                         /* (int) := (int) | (float) := (float) */
                         /* x := y */
                         generateCode(irSys,IS(ASSIGN),newsymbol->attribute.irOperand,srcOperand,NULL);
-                    }else if(newsymbol->attribute.IdType->TypeClass == ARRAY || newsymbol->attribute.IdType == STRUCTURE){
+                    }else if(newsymbol->attribute.IdType->TypeClass == ARRAY || newsymbol->attribute.IdType->TypeClass == STRUCTURE){
                         /* Tricky: use memory copy here */
                         operand * sizeOfType = creatOperand(irSys,IR(INT),newsymbol->attribute.IdType->typeWidth);
                         operand * dstAddr = copyOperand(irSys,newsymbol->attribute.irOperand);
@@ -355,7 +355,7 @@ SA(Symbol*, FunDec, TypeDescriptor * returntype, bool definition){
     
     /* Assign an operand for function */
     if(oldfun != NULL){
-        newfun->attribute.irOperand = oldfun;
+        newfun->attribute.irOperand = oldfun->attribute.irOperand;
     }else{
         /* A new function */
         bool isMain = (strcmp(funid,"main") == 0);
@@ -863,7 +863,7 @@ SA(TypeDescriptor*, Exp, bool LeftHand, operand * expIrOperand){
         case 3 : /* Exp OR Exp */
             {
                 /* Exp := #1 */
-                generateCode(irSys,IS(ASSIGN),expIrOperand,oneOperand,NULL);
+                generateCode(irSys,IS(ASSIGN),expIrOperand,oneOperand(),NULL);
                 operand * newlabelTrue = creatOperand(irSys,IR(LABEL));
                 /* IF Exp OR Exp GOTO newlabelTrue */
                 TypeDescriptor * curExp = SemanticAnalysisExpCondition(n,symtab,irSys,LeftHand,newlabelTrue,NULL);
