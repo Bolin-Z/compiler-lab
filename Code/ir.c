@@ -213,7 +213,7 @@ void fprintfIrCode(FILE * f, irSystem * sys){
         switch(c->instr){
             case IS(LABEL)     : fprintf(f,"LABEL "); fprintfOperand(f,c->result); fprintf(f," :"); break;
             case IS(FUNCTION)  : fprintf(f,"FUNCTION "); fprintfOperand(f,c->result); fprintf(f," :"); break;
-            case IS(ASSIGN)    : fprintfOperand(f,c->result); fprintf(f," := "); fprintfOperand(f,c->arg1); fprintf(f,"\n"); break;
+            case IS(ASSIGN)    : fprintfOperand(f,c->result); fprintf(f," := "); fprintfOperand(f,c->arg1); break;
             case IS(PLUS)      : fprintfOperand(f,c->result); fprintf(f," := "); fprintfOperand(f,c->arg1); fprintf(f," + "); fprintfOperand(f,c->arg2); break;
             case IS(MINUS)     : fprintfOperand(f,c->result); fprintf(f," := "); fprintfOperand(f,c->arg1); fprintf(f," - "); fprintfOperand(f,c->arg2); break;
             case IS(MUL)       : fprintfOperand(f,c->result); fprintf(f," := "); fprintfOperand(f,c->arg1); fprintf(f," * "); fprintfOperand(f,c->arg2); break;
