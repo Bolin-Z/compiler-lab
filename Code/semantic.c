@@ -243,38 +243,9 @@ SA(void, Def, bool field){
                         generateCode(irSys,IS(ASSIGN),newsymbol->attribute.irOperand,srcOperand,NULL);
                     }else if(newsymbol->attribute.IdType->TypeClass == ARRAY || newsymbol->attribute.IdType->TypeClass == STRUCTURE){
                         /* Tricky: use memory copy here */
-                        operand * sizeOfType = creatOperand(irSys,IR(INT),newsymbol->attribute.IdType->typeWidth);
                         operand * dstAddr = copyOperand(irSys,newsymbol->attribute.irOperand);
                         dstAddr->info.variable.modifier = IR(ACCESSADDR);
-                        operand * srcAddr = srcOperand;
-                        operand * offSet = creatOperand(irSys,IR(TEMP),IR(NORMAL));
-                        operand * dstTargetAddr = creatOperand(irSys,IR(TEMP),IR(NORMAL));
-                        operand * srcTargetAddr = creatOperand(irSys,IR(TEMP),IR(NORMAL));
-                        operand * tempVal =  creatOperand(irSys,IR(TEMP),IR(NORMAL));
-                        operand * labelBegin = creatOperand(irSys,IR(LABEL));
-                        operand * labelEnd = creatOperand(irSys,IR(LABEL));
-                        /*
-                                offSet := #0
-                            LABEL labelBegin :
-                                IF offSet >= sizeOfType GOTO labelEnd
-                                dstTargetAddr := dstAddr + offSet
-                                srcTargetAddr := srcAddr + offSet
-                                tempVal := *srcTargetAddr
-                                *dstTargetAddr := tempval
-                                offSet := offSet + #4
-                                GOTO labelBegin
-                            LABEL labelEnd :
-                        */
-                        generateCode(irSys,IS(ASSIGN),offSet,zeroOperand(),NULL);
-                        generateCode(irSys,IS(LABEL),labelBegin,NULL,NULL);
-                        generateCode(irSys,IS(GREATEREQ),labelEnd,offSet,sizeOfType);
-                        generateCode(irSys,IS(PLUS),dstTargetAddr,dstAddr,offSet);
-                        generateCode(irSys,IS(PLUS),srcTargetAddr,srcAddr,offSet);
-                        generateCode(irSys,IS(GETVAL),tempVal,srcTargetAddr,NULL);
-                        generateCode(irSys,IS(SETVAL),dstTargetAddr,tempVal,NULL);
-                        generateCode(irSys,IS(PLUS),offSet,offSet,minTypeWidthOperand());
-                        generateCode(irSys,IS(GOTO),labelBegin,NULL,NULL);
-                        generateCode(irSys,IS(LABEL),labelEnd,NULL,NULL);
+                        generateMemoryCopyCode(irSys,srcOperand,dstAddr,newsymbol->attribute.IdType->typeWidth);
                     }else{
                         /* Error */
                     }
