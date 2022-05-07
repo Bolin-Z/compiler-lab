@@ -1059,7 +1059,7 @@ SA(TypeDescriptor*, Exp, bool leftVal, bool leftOfAssign, operand * expIrOperand
                             generateCode(irSys,IS(SETVAL),lexpOperand,expIrOperand,NULL);
                         } else if (lexp->Array.elem->TypeClass == STRUCTURE) {
                             /* use memory copy here */
-                            generateMemoryCopyCode(irSys,expIrOperand,lexp,lexp->Array.elem->typeWidth);
+                            generateMemoryCopyCode(irSys,expIrOperand,lexpOperand,lexp->Array.elem->typeWidth);
                         } else {
                             /* error */
                         }
