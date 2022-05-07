@@ -205,6 +205,40 @@ irCode * generateCode(irSystem * sys, int instruction, operand * result, operand
     return newCode;
 }
 
+void generateMemoryCopyCode(irSystem * sys, operand * src, operand * dst, int copySize){
+    operand * cpSize = creatOperand(sys,IR(INT),copySize);
+    operand * dstAddr = dst;
+    operand * srcAddr = src;
+    operand * offset = creatOperand(sys,IR(TEMP),IR(NORMAL));
+    operand * dstTargetAddr = creatOperand(sys,IR(TEMP),IR(NORMAL));
+    operand * srcTargetAddr = creatOperand(sys,IR(TEMP),IR(NORMAL));
+    operand * tempVal = creatOperand(sys,IR(TEMP),IR(NORMAL));
+    operand * labelBegin = creatOperand(sys,IR(LABEL));
+    operand * labelEnd = creatOperand(sys,IR(LABEL));
+    /*
+            offset := #0
+        LABEL labelBegin :
+            IF offset >= cpSize GOTO labelEnd
+            dstTargetAddr := dstAddr + offset
+            srcTargetAddr := srcAddr + offset
+            tempVal := *srcTargetAddr
+            *dstTargetAddr := tempVal
+            offset := offset + #4
+            GOTO labelBegin 
+        LABEL labelEnd :
+    */
+    generateCode(sys,IS(ASSIGN),offset,zeroOperand(),NULL);
+    generateCode(sys,IS(LABEL),labelBegin,NULL,NULL);
+    generateCode(sys,IS(GREATEREQ),labelEnd,offset,cpSize);
+    generateCode(sys,IS(PLUS),dstTargetAddr,dstAddr,offset);
+    generateCode(sys,IS(PLUS),srcTargetAddr,srcAddr,offset);
+    generateCode(sys,IS(GETVAL),tempVal,srcTargetAddr,NULL);
+    generateCode(sys,IS(SETVAL),dstTargetAddr,tempVal,NULL);
+    generateCode(sys,IS(PLUS),offset,offset,minTypeWidthOperand());
+    generateCode(sys,IS(GOTO),labelBegin,NULL,NULL);
+    generateCode(sys,IS(LABEL),labelEnd,NULL,NULL);
+}
+
 /* Output all IrCode to file */
 void fprintfIrCode(FILE * f, irSystem * sys){
     irCode * curCode = sys->codeListHead;
