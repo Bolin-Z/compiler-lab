@@ -523,7 +523,7 @@ SA(TypeDescriptor*, ExpCondition, operand * labelTrue, operand * labelFalse){
                         if(IsEqualType(lexp,BasicInt()) || IsEqualType(lexp,BasicFloat())){
                             /* Relation operation should return boolean value */
                             int relop = ((struct CST_mul_node*)(n->child_list[1]))->tktype;
-                            bool ifTrue = (labelTrue == NULL);
+                            bool ifTrue = (labelTrue != NULL);
                             int instr = 0;
                             switch(relop){
                                 case TK(LT)  : instr = (ifTrue) ? IS(LESS) : IS(GREATEREQ); break; 
