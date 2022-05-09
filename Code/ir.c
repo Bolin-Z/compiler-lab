@@ -110,7 +110,7 @@ operand * creatOperand(irSystem * sys, int operandClass, ...){
             newOperand->info.parameter.Tag = sys->counter.parameter;
             sys->counter.parameter += 1;
             newOperand->info.parameter.modifier = va_arg(ap,int);
-        }
+        } break;
         case IR(INT) : {
             newOperand->info.integerVal = va_arg(ap,int);
         } break;
