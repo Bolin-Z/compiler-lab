@@ -1057,7 +1057,7 @@ SA(TypeDescriptor*, Exp, bool leftVal, bool leftOfAssign, operand * expIrOperand
                         if (lexp->Array.elem->TypeClass == BASIC) {
                             /* *lexp := rvalue */
                             generateCode(irSys,IS(SETVAL),lexpOperand,expIrOperand,NULL);
-                        } else if (lexp->Array.elem->TypeClass == STRUCTURE) {
+                        } else if (lexp->Array.elem->TypeClass == STRUCTURE || lexp->Array.elem->TypeClass == ARRAY) {
                             /* use memory copy here */
                             generateMemoryCopyCode(irSys,expIrOperand,lexpOperand,lexp->Array.elem->typeWidth);
                         } else {
