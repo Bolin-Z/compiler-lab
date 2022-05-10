@@ -1144,7 +1144,10 @@ SA(TypeDescriptor*, Exp, bool leftVal, bool leftOfAssign, operand * expIrOperand
                                 /* ID := rvalue */
                                 generateCode(irSys,IS(ASSIGN),id->attribute.irOperand,expIrOperand,NULL);
                             } else if(id->attribute.IdType->TypeClass == ARRAY || id->attribute.IdType->TypeClass == STRUCTURE){
-                                generateMemoryCopyCode(irSys,expIrOperand,id->attribute.irOperand,id->attribute.IdType->typeWidth);
+                                /* ADDR := &ID */
+                                operand * tempOperand = creatOperand(irSys,IR(TEMP),IR(NORMAL));
+                                generateCode(irSys,IS(GETADDR),tempOperand,id->attribute.irOperand,NULL);
+                                generateMemoryCopyCode(irSys,expIrOperand,tempOperand,id->attribute.IdType->typeWidth);
                             }
                         } else {
                             if(id->attribute.IdType->TypeClass == BASIC){
