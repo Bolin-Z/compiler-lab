@@ -15,14 +15,13 @@ reg regs[32] = {
     {"$gp"  , true}, {"$sp"  , true}, {"$fp"  , true}, {"$ra"  , true}
 };
 
-void analysisIRcode(asmFunction ** asmFunctionList,irSystem * sys);
+asmFunction * analysisIRcode(irSystem * sys);
 void init(FILE* f);
 void translateFunctionToAsm(FILE * f, asmFunction * function);
 
 void translateIRToAsm(FILE* f, irSystem* sys){
     /* seperate ir code into blocks */
-    asmFunction * asmFunctionList = NULL;
-    analysisIRcode(&asmFunctionList,sys);
+    asmFunction * asmFunctionList = analysisIRcode(sys);
 
     /* translate */
     init(f);
@@ -63,8 +62,9 @@ void init(FILE* f){
     fprintf(f,"%s",initCode);
 }
 
-void analysisIRcode(asmFunction ** asmFunctionList,irSystem * sys){
-    asmFunction * curFunction = NULL;
+asmFunction * analysisIRcode(irSystem * sys){
+    asmFunction * functionListHead = NULL;
+    asmFunction * curFunction = functionListHead;
     asmBlock * curBlock = NULL;
     irCode * curCode = sys->codeListHead;
     while(curCode){
@@ -79,4 +79,6 @@ void analysisIRcode(asmFunction ** asmFunctionList,irSystem * sys){
         }
         curCode = curCode->next;
     }
+
+    return functionListHead;
 }
