@@ -967,7 +967,7 @@ SA(TypeDescriptor*, Exp, bool leftVal, bool leftOfAssign, operand * expIrOperand
                             generateCode(irSys,IS(ASSIGN),expIrOperand,zeroOperand(),NULL);
                         }else{
                             for(int i = expectargnum - 1;i >= 0;i--){
-                                /* PARAM x */
+                                /* ARG x */
                                 generateCode(irSys,IS(ARG),argList[i],NULL,NULL);
                             }
                             /* Exp := CALL f */
