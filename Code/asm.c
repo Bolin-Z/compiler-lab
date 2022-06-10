@@ -104,6 +104,7 @@ asmFunction * analysisIRcode(irSystem * sys){
                     newFunction->next = NULL; newFunction->prev = functionListTail;
                     newFunction->paramCount = 0;
                     newFunction->localVarCount = 0;
+                    newFunction->size = 0;
 
                     if(!functionListHead) functionListHead = newFunction;
                     if(!functionListTail) functionListTail = newFunction;
@@ -219,20 +220,219 @@ asmFunction * analysisIRcode(irSystem * sys){
     /* fill the table */
     curFunction = functionListHead;
     for(;;){
+        int localVarPushed = 0; int parameterPushed = 0;
         int parameterOffset = 0;
         asmBlock * curBlock = curFunction->blockListHead;
         for(;;){
-            irCode * curCode = curBlock->blockEnd;
+            int tempVarPushed = 0;
+            irCode * curCode = curBlock->blockBegin;
             for(;;){
                 switch(curCode->code.instr){
-
+                    case IS(PLUS) : 
+                    case IS(MINUS) :
+                    case IS(MUL) :
+                    case IS(DIV) : {
+                        operand * test = curCode->code.result;
+                        for(int i = 0;i < 3;i++){
+                            switch(test->operandClass){
+                                case IR(VAR) : {
+                                    if(localVar[test->info.variable.Tag]){
+                                        localVarItem * v = &(curFunction->localVarTable[localVarPushed]);
+                                        localVarPushed++;
+                                        v->varID = test->info.variable.Tag;
+                                        v->offset = curFunction->size;
+                                        curFunction->size += 4;
+                                        localVar[test->info.variable.Tag] = false;
+                                    }
+                                    break;
+                                }
+                                case IR(PARAM) : {
+                                    /* first appear in declaration */
+                                    break;
+                                }
+                                case IR(TEMP) : {
+                                    if(tempVar[test->info.tempVar.Tag]){
+                                        tempVarItem * t = &(curBlock->tempVarTable[tempVarPushed]);
+                                        tempVarPushed++;
+                                        t->tempVarID = test->info.tempVar.Tag;
+                                        t->inReg = false;
+                                        t->storedreg = NOTEXIST;
+                                        t->offset = NOTEXIST;
+                                        t->lastUsage = curCode;
+                                        tempVar[test->info.tempVar.Tag] = false;
+                                    } else {
+                                        tempVarItem * t = getTempVarItemByID(curBlock,test->info.tempVar.Tag);
+                                        t->lastUsage = curCode;
+                                    }
+                                    break;
+                                }
+                            }
+                            test = (i == 0) ? (curCode->code.arg1) : (curCode->code.arg2);
+                        }
+                        break;
+                    }
+                    case IS(ASSIGN) : 
+                    case IS(GETADDR) :
+                    case IS(GETVAL) :
+                    case IS(SETVAL) : {
+                        operand * test = curCode->code.result;
+                        for(int i = 0;i < 2;i++){
+                            switch(test->operandClass){
+                                case IR(VAR) : {
+                                    if(localVar[test->info.variable.Tag]){
+                                        localVarItem * v = &(curFunction->localVarTable[localVarPushed]);
+                                        localVarPushed++;
+                                        v->varID = test->info.variable.Tag;
+                                        v->offset = curFunction->size;
+                                        curFunction->size += 4;
+                                        localVar[test->info.variable.Tag] = false;
+                                    }
+                                    break;
+                                }
+                                case IR(PARAM) : {
+                                    /* first appear in declaration */
+                                    break;
+                                }
+                                case IR(TEMP) : {
+                                    if(tempVar[test->info.tempVar.Tag]){
+                                        tempVarItem * t = &(curBlock->tempVarTable[tempVarPushed]);
+                                        tempVarPushed++;
+                                        t->tempVarID = test->info.tempVar.Tag;
+                                        t->inReg = false;
+                                        t->storedreg = NOTEXIST;
+                                        t->offset = NOTEXIST;
+                                        t->lastUsage = curCode;
+                                        tempVar[test->info.tempVar.Tag] = false;
+                                    } else {
+                                        tempVarItem * t = getTempVarItemByID(curBlock,test->info.tempVar.Tag);
+                                        t->lastUsage = curCode;
+                                    }
+                                    break;
+                                }
+                            }
+                            test = curCode->code.arg1;
+                        }
+                        break;
+                    }
+                    case IS(EQ) :
+                    case IS(NEQ) :
+                    case IS(LESS) :
+                    case IS(LESSEQ) :
+                    case IS(GREATER) :
+                    case IS(GREATEREQ) : {
+                        operand * test = curCode->code.arg1;
+                        for(int i = 0;i < 2;i++){
+                            switch(test->operandClass){
+                                case IR(VAR) : {
+                                    if(localVar[test->info.variable.Tag]){
+                                        localVarItem * v = &(curFunction->localVarTable[localVarPushed]);
+                                        localVarPushed++;
+                                        v->varID = test->info.variable.Tag;
+                                        v->offset = curFunction->size;
+                                        curFunction->size += 4;
+                                        localVar[test->info.variable.Tag] = false;
+                                    }
+                                    break;
+                                }
+                                case IR(PARAM) : {
+                                    /* first appear in declaration */
+                                    break;
+                                }
+                                case IR(TEMP) : {
+                                    if(tempVar[test->info.tempVar.Tag]){
+                                        tempVarItem * t = &(curBlock->tempVarTable[tempVarPushed]);
+                                        tempVarPushed++;
+                                        t->tempVarID = test->info.tempVar.Tag;
+                                        t->inReg = false;
+                                        t->storedreg = NOTEXIST;
+                                        t->offset = NOTEXIST;
+                                        t->lastUsage = curCode;
+                                        tempVar[test->info.tempVar.Tag] = false;
+                                    } else {
+                                        tempVarItem * t = getTempVarItemByID(curBlock,test->info.tempVar.Tag);
+                                        t->lastUsage = curCode;
+                                    }
+                                    break;
+                                }
+                            }
+                            test = curCode->code.arg2;
+                        }
+                        break;
+                    }
+                    case IS(RETURN) :
+                    case IS(ARG) :
+                    case IS(CALL) :
+                    case IS(READ) :
+                    case IS(WRITE) : {
+                        operand * test = curCode->code.result;
+                        switch(test->operandClass){
+                            case IR(VAR) : {
+                                if(localVar[test->info.variable.Tag]){
+                                    localVarItem * v = &(curFunction->localVarTable[localVarPushed]);
+                                    localVarPushed++;
+                                    v->varID = test->info.variable.Tag;
+                                    v->offset = curFunction->size;
+                                    curFunction->size += 4;
+                                    localVar[test->info.variable.Tag] = false;
+                                }
+                                break;
+                            }
+                            case IR(PARAM) : {
+                                /* first appear in declaration */
+                                break;
+                            }
+                            case IR(TEMP) : {
+                                if(tempVar[test->info.tempVar.Tag]){
+                                    tempVarItem * t = &(curBlock->tempVarTable[tempVarPushed]);
+                                    tempVarPushed++;
+                                    t->tempVarID = test->info.tempVar.Tag;
+                                    t->inReg = false;
+                                    t->storedreg = NOTEXIST;
+                                    t->offset = NOTEXIST;
+                                    t->lastUsage = curCode;
+                                    tempVar[test->info.tempVar.Tag] = false;
+                                } else {
+                                    tempVarItem * t = getTempVarItemByID(curBlock,test->info.tempVar.Tag);
+                                    t->lastUsage = curCode;
+                                }
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    case IS(PARAM) : {
+                        operand * p = curCode->code.result;
+                        if(parameter[p->info.parameter.Tag]){
+                            paramItem * param = &(curFunction->paramTable[parameterPushed]);
+                            parameterPushed++;
+                            param->paramID = p->info.parameter.Tag; 
+                            param->offset = parameterOffset;
+                            parameterOffset += 4;
+                            parameter[p->info.parameter.Tag] = false;
+                        }
+                        break;
+                    }
+                    case IS(DEC) : {
+                        operand * v = curCode->code.result;
+                        int varSize = curCode->code.arg1->info.sizeVal;
+                        if(localVar[v->info.variable.Tag]){
+                            localVarItem * var = &(curFunction->localVarTable[localVarPushed]);
+                            localVarPushed++;
+                            var->varID = v->info.variable.Tag;
+                            var->offset = curFunction->size;
+                            curFunction->size += varSize;
+                            localVar[v->info.variable.Tag] = false;
+                        }
+                        break;
+                    }
                 }
-                if(curCode == curBlock->blockBegin) break;
-                else curCode = curCode->prev;
+                if(curCode == curBlock->blockEnd) break;
+                else curCode = curCode->next;
             }
             if(curBlock == curFunction->blockListTail) break;
             else curBlock = curBlock->next;
         }
+        curFunction->size += 36;
         if(curFunction == functionListTail) break;
         else curFunction = curFunction->next;
     }
