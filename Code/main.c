@@ -6,6 +6,7 @@
 #include"cst.h"
 #include"semantic.h"
 #include"ir.h"
+#include"asm.h"
 
 extern void yyrestart(FILE*);
 extern bool has_error;
@@ -14,7 +15,7 @@ struct CST_node * cst_root;
 int main(int argc,char* argv[]){
     /* command line arguments */
     if(argc!=3){
-        fprintf(ERROR_MSG_2,"Usage: %s *.cmm *.ir\n",argv[0]);
+        fprintf(ERROR_MSG_2,"Usage: %s *.cmm *.s\n",argv[0]);
         exit(1);
     }
     FILE * fp = fopen(argv[1],"r");
@@ -45,12 +46,21 @@ int main(int argc,char* argv[]){
         destory_tree(cst_root);
     }
 
-/* Project 3*/
+/* Project 3
     if(!has_error){
         // optimize()
         FILE * outputIrCode = fopen(argv[2],"w+");
         if(outputIrCode){
             fprintfIrCode(outputIrCode,irSys);
+        }
+    }
+*/
+
+/* Project 4 */
+    if(!has_error){
+        FILE * outputAsmCode = fopen(argv[2],"w+");
+        if(outputAsmCode){
+            translateIRToAsm(outputAsmCode,irSys);
         }
     }
     destoryIrSystem(irSys);
