@@ -85,12 +85,13 @@ typedef struct localVarItem {
 typedef struct asmFunction {
     asmFunction * next, * prev;
 
-    asmBlock * blocks;
+    asmBlock * blockListHead;
+    asmBlock * blockListTail;
 
     paramItem * paramTable;
     int paramCount;
-    localVarItem * localValTable;
-    int localValCount;
+    localVarItem * localVarTable;
+    int localVarCount;
 
     int size;
 } asmFunction;

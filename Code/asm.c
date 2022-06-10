@@ -92,11 +92,160 @@ void init(FILE* f){
 
 asmFunction * analysisIRcode(irSystem * sys){
     asmFunction * functionListHead = NULL;
+    asmFunction * functionListTail = NULL;
+    irCode * curCode = sys->codeListHead;
+    /* seperate into blocks */
+    while(curCode){
+        switch(curCode->code.instr){
+            switch(curCode->code.instr){
+                case IS(FUNCTION) : {
+                    /* begin of new function */
+                    asmFunction * newFunction = (asmFunction *)malloc(sizeof(asmFunction));
+                    newFunction->next = NULL; newFunction->prev = functionListTail;
+                    newFunction->paramCount = 0;
+                    newFunction->localVarCount = 0;
+
+                    if(!functionListHead) functionListHead = newFunction;
+                    if(!functionListTail) functionListTail = newFunction;
+                    else {
+                        /* not the first function */
+                        functionListTail->next = newFunction;
+                        /* close last block */
+                        functionListTail->blockListTail->blockEnd = curCode->prev;
+                        functionListTail = newFunction;
+                    }
+                    /* begin of new block */
+                    asmBlock * newBlock = (asmBlock *)malloc(sizeof(asmBlock));
+                    newBlock->blockBegin = curCode; newBlock->blockEnd = NULL;
+                    newBlock->tempVarCount = 0; newBlock->tempVarStackSize = 0;
+                    /* must be the first block in function */
+                    newBlock->prev = NULL; newBlock->next = NULL;
+                    functionListTail->blockListHead = newBlock;
+                    functionListTail->blockListTail = newBlock;
+                    break;
+                }
+                case IS(GOTO) :
+                case IS(EQ) :
+                case IS(NEQ) :
+                case IS(LESS) :
+                case IS(LESSEQ) :
+                case IS(GREATER) :
+                case IS(GREATEREQ) : {
+                    /* end of block */
+                    irCode * nextCode = curCode->next;
+                    if(!nextCode) {
+                        /* curCode is the last code */
+                        asmFunction * curFunction = functionListTail;
+                        curFunction->blockListTail->blockEnd = curCode;
+                        break;
+                    }
+                    curCode = nextCode;
+                    /* fall through */
+                }
+                case IS(LABEL) : {
+                    /* begin of new block */
+                    asmBlock * newBlock = (asmBlock *)malloc(sizeof(asmBlock));
+                    newBlock->blockBegin = curCode; newBlock->blockEnd = NULL;
+                    newBlock->tempVarCount = 0; newBlock->tempVarStackSize = 0;
+                    /* can not be the first block in function*/
+                    asmFunction * curFunction = functionListTail;
+                    asmBlock * prevBlock = curFunction->blockListTail;
+                    /* set the last code of previous block */
+                    prevBlock->blockEnd = curCode->prev;
+                    /* connect blocklists of function */
+                    newBlock->prev = prevBlock; prevBlock->next = newBlock;
+                    curFunction->blockListTail = newBlock;
+                    break;
+                }
+            }
+        }
+        curCode = curCode->next;
+    }
+
+    /* calculate variable, parameter and temp variable */
+    asmFunction * curFunction = functionListHead;
+    bool * localVar = (bool *)malloc(sizeof(bool)*(sys->counter.variable));
+    bool * parameter = (bool *)malloc(sizeof(bool)*(sys->counter.parameter));
+    bool * tempVar = (bool *)malloc(sizeof(bool)*(sys->counter.tempVar));
+    
+    asmFunction * curFunction;
+    for(;;){
+        asmBlock * curBlock = curFunction->blockListHead;
+        for(;;){
+            irCode * curCode = curBlock->blockBegin;
+            for(;;){
+                operand * test = curCode->code.result;
+                for(int i = 0;i < 3;i++){
+                    if(test){
+                        switch(test->operandClass){
+                            case IR(VAR) : {
+                                if(!localVar[test->info.variable.Tag]){
+                                    curFunction->localVarCount += 1;
+                                    localVar[test->info.variable.Tag] = true;
+                                }
+                                break;
+                            }
+                            case IR(PARAM) : {
+                                if(!parameter[test->info.parameter.Tag]){
+                                    curFunction->paramCount += 1;
+                                    parameter[test->info.parameter.Tag] = true;
+                                }
+                                break;
+                            }
+                            case IR(TEMP) : {
+                                if(!tempVar[test->info.tempVar.Tag]){
+                                    curBlock->tempVarCount += 1;
+                                    tempVar[test->info.tempVar.Tag] = true;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    test = (i == 0) ? (curCode->code.arg1) : (curCode->code.arg2);
+                }
+                if(curCode == curBlock->blockEnd) break;
+                else curCode = curCode->next;
+            }
+            curBlock->tempVarTable = (tempVarItem *)malloc(sizeof(tempVarItem)*curBlock->tempVarCount);
+            if(curBlock == curFunction->blockListTail) break;
+            else curBlock = curBlock->next;
+        }
+        curFunction->localVarTable = (localVarItem *)malloc(sizeof(localVarItem)*curFunction->localVarCount);
+        curFunction->paramTable = (paramItem*)malloc(sizeof(paramItem)*curFunction->paramCount);
+        if(curFunction == functionListTail) break;
+        else curFunction = curFunction->next;
+    }
+
+    /* fill the table */
+    curFunction = functionListHead;
+    for(;;){
+        int parameterOffset = 0;
+        asmBlock * curBlock = curFunction->blockListHead;
+        for(;;){
+            irCode * curCode = curBlock->blockEnd;
+            for(;;){
+                switch(curCode->code.instr){
+
+                }
+                if(curCode == curBlock->blockBegin) break;
+                else curCode = curCode->prev;
+            }
+            if(curBlock == curFunction->blockListTail) break;
+            else curBlock = curBlock->next;
+        }
+        if(curFunction == functionListTail) break;
+        else curFunction = curFunction->next;
+    }
+
+    free(localVar);
+    free(parameter);
+    free(tempVar);
+
     return functionListHead;
 }
 
 void translateFunctionToAsm(FILE * f, asmFunction * function){
-    asmBlock * curBlock = function->blocks;
+    asmBlock * curBlock = function->blockListHead;
     while(curBlock){
         irCode * curCode = curBlock->blockBegin;
         while(1){
@@ -532,9 +681,9 @@ tempVarItem * getTempVarItemByID(asmBlock * b, int ID) {
 
 localVarItem * getLocalVarItemByID(asmFunction * f, int ID) {
     localVarItem * res = NULL;
-    for(int i = 0;i < f->localValCount;i++){
-        if(f->localValTable[i].varID == ID){
-            res = &(f->localValTable[i]);
+    for(int i = 0;i < f->localVarCount;i++){
+        if(f->localVarTable[i].varID == ID){
+            res = &(f->localVarTable[i]);
             break;
         }
     }
